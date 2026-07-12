@@ -22,9 +22,3 @@ streamlit run app.py
 ## Variables de entorno
 
 Crea un archivo .env con estas variables:
-
-```env
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_KEY=tu-clave-anonima-o-service-role
-SUPABASE_DB_URL=postgresql://postgres:password@host:5432/postgres
-```

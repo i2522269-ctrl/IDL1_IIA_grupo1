@@ -1,8 +1,0 @@
--- Importacion de datos Bronze a Supabase
---
--- Paso 1: Ejecuta bronze_schema.sql para crear las tablas.
--- Paso 2: Ejecuta load_bronze_from_excel.py para cargar los CSVs:
---         python load_bronze_from_excel.py
---
--- Requiere: SUPABASE_DB_URL configurado en .env
---           Tablas bronze ya creadas (bronze_schema.sql)
