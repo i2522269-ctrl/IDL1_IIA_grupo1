@@ -21,3 +21,14 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+
+# Entorno virtual
+.venv/
+
+# Variables de entorno
+.env
+
+# Caché y archivos temporales
+__pycache__/
+*.pyc
+*.db
