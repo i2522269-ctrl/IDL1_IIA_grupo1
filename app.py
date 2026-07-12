@@ -11,6 +11,7 @@ import pandas as pd
 # Para que pueda importar desde las carpetas del proyecto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from config import get_cliente
 from consultas.capa_gold import (
     get_kpi_generales, get_demanda_mensual, get_inventario_estado,
     get_proveedores_ranking, get_top_articulos, get_evolucion_grupo
@@ -41,16 +42,6 @@ st.markdown("---")
 
 
 # ---- Conexion a Supabase ----
-@st.cache_resource
-def get_cliente():
-    from supabase import create_client
-    from dotenv import load_dotenv
-    load_dotenv()
-    url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
-    return create_client(url, key)
-
-
 try:
     cliente = get_cliente()
     st.success("Conexion a Supabase establecida correctamente")
