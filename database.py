@@ -1,24 +1,29 @@
 import os
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import create_client
 
-# Cargar variables desde el archivo .env
 load_dotenv()
 
-# Obtener credenciales de forma segura
-SUPABASE_URL = "https://buafaugwwcqsbrwaycro.supabase.co" # Tu URL de proyecto
-SUPABASE_KEY = os.getenv("buafaugwwcqsbrwaycro")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
 
-# Inicializar cliente
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def test_connection():
-    try:
-        # Prueba simple para verificar conexión
-        response = supabase.table("vulnerabilities").select("*").limit(1).execute()
-        print("Conexión a Supabase establecida con éxito.")
-    except Exception as e:
-        print(f"Error al conectar: {e}")
+def get_client():
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise ValueError("Faltan las variables SUPABASE_URL y SUPABASE_KEY")
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+def test_connection(table_name="vulnerabilities"):
+    client = get_client()
+    response = client.table(table_name).select("*").limit(1).execute()
+    print("Conexión a Supabase establecida con éxito.")
+    return response.data
+
 
 if __name__ == "__main__":
-    test_connection()
+    try:
+        rows = test_connection()
+        print(rows)
+    except Exception as exc:
+        print(f"Error al conectar: {exc}")
