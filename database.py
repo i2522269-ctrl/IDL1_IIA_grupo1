@@ -14,7 +14,7 @@ def get_client():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-def test_connection(table_name="vulnerabilities"):
+def test_connection(table_name="grupos_sheet1"):
     client = get_client()
     response = client.table(table_name).select("*").limit(1).execute()
     print("Conexión a Supabase establecida con éxito.")

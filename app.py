@@ -19,7 +19,7 @@ if not supabase_url or not supabase_key:
 client = create_client(supabase_url, supabase_key)
 
 try:
-    response = client.table("vulnerabilities").select("*").limit(1).execute()
+    response = client.table("grupos_sheet1").select("*").limit(10).execute()
     data = response.data or []
     st.success("Conexión a Supabase establecida")
     st.dataframe(data)
