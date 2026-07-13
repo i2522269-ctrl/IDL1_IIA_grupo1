@@ -54,3 +54,11 @@ streamlit run app.py
 - Plotly
 - Psycopg2
 - NumPy
+
+
+
+
+
+## STREAMLIT
+https://proyecto-appuctivo-iia-apl2apposugzpmtchcsoxg8.streamlit.app/
+
