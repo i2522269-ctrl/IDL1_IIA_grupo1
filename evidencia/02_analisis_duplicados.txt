@@ -1,0 +1,62 @@
+======================================================================
+  FASE 2: ANALISIS DE DUPLICADOS
+  Fecha: 2026-07-12 19:27
+======================================================================
+
+----------------------------------------------------------------------
+  bronze.recepcion - Analisis por solnum
+----------------------------------------------------------------------
+  Top 10 solnum con mas filas:
+    solnum=579950: 32 filas
+    solnum=567497: 26 filas
+    solnum=576779: 25 filas
+    solnum=581376: 25 filas
+    solnum=608260: 23 filas
+    solnum=595081: 23 filas
+    solnum=635758: 22 filas
+    solnum=581827: 22 filas
+    solnum=611669: 21 filas
+    solnum=609782: 20 filas
+
+  Total pedidos con multiples filas: 1411
+
+  Ejemplo (solnum con mas filas):
+    solnum=579950 artcitem=ART-06258 solcan=5000.00 nrdcac=100.00 solpre=0.50 nrcfec=2023-01-05
+    solnum=579950 artcitem=ART-06258 solcan=5000.00 nrdcac=50.00 solpre=0.50 nrcfec=2023-01-10
+    solnum=579950 artcitem=ART-06258 solcan=5000.00 nrdcac=50.00 solpre=0.50 nrcfec=2023-01-19
+    solnum=579950 artcitem=ART-06258 solcan=5000.00 nrdcac=100.00 solpre=0.50 nrcfec=2023-01-25
+    solnum=579950 artcitem=ART-06258 solcan=5000.00 nrdcac=100.00 solpre=0.50 nrcfec=2023-02-02
+    solnum=579950 artcitem=ART-06258 solcan=5000.00 nrdcac=50.00 solpre=0.50 nrcfec=2023-02-07
+
+  Entregas parciales (mismo solnum+artcitem, distinto nrdcac): 1175
+  Duplicados por solnum+artcitem+nrdcac: 630
+  Filas 100% identicas (duplicados reales): 0
+
+----------------------------------------------------------------------
+  bronze.articulos - Analisis por artcitem
+----------------------------------------------------------------------
+  Top 10 artcitem con mas filas:
+    artcitem=ART-18948: 3 filas
+    artcitem=ART-02347: 3 filas
+    artcitem=ART-19073: 3 filas
+    artcitem=ART-17358: 3 filas
+    artcitem=ART-17468: 3 filas
+    artcitem=ART-18751: 3 filas
+    artcitem=ART-18688: 3 filas
+    artcitem=ART-19240: 3 filas
+    artcitem=ART-02352: 3 filas
+    artcitem=ART-17507: 3 filas
+
+  Ejemplo (artcitem=ART-18688, Articulo generico 18688):
+    ubialm=40 ubistock=15.00 artfusal=2025-11-29
+    ubialm=43 ubistock=5.00 artfusal=2025-11-29
+    ubialm=42 ubistock=4.00 artfusal=2025-11-29
+  Filas 100% identicas: 0
+
+----------------------------------------------------------------------
+  OTRAS TABLAS
+----------------------------------------------------------------------
+  solicitudes: 41971 filas, 41971 distinct solnum, 0 duplicados OK
+  maestro_articulos: 43255 filas, 43255 distinct artcitem, 0 duplicados OK
+  grupos: 32 filas, 32 distinct artgrinv, 0 duplicados OK
+  proveedores: 456 filas, 456 distinct acrecodi, 0 duplicados OK

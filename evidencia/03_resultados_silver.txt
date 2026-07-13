@@ -1,0 +1,154 @@
+======================================================================
+  FASE 3: CAPA SILVER - LIMPIEZA Y CARGA
+  Fecha: 2026-07-12 19:27
+======================================================================
+
+[0] Preparando esquema silver...
+  Esquema silver creado.
+
+[1/6] silver.grupos
+  -> 32 filas
+
+[2/6] silver.proveedores
+  -> 456 filas
+
+[3/6] silver.maestro_articulos
+  -> 43255 filas
+
+[4/6] silver.articulos
+  -> 4130 filas
+
+[5/6] silver.recepcion
+  -> 43109 filas
+
+[6/6] silver.solicitudes
+  -> 41971 filas
+
+======================================================================
+  VERIFICACION FINAL: BRONZE vs SILVER
+======================================================================
+  Tabla                         Bronze     Silver
+  ------------------------- ---------- ----------
+  grupos                            32         32
+  proveedores                      456        456
+  maestro_articulos             43,255     43,255
+  articulos                      4,130      4,130
+  recepcion                     43,109     43,109
+  solicitudes                   41,971     41,971
+
+======================================================================
+  TIPOS DE DATOS EN SILVER
+======================================================================
+
+  silver.grupos:
+    artgrinv             -> text
+    nombre               -> text
+
+  silver.proveedores:
+    acrecodi             -> text
+    acreraso             -> text
+    acredire             -> text
+    acretelf             -> text
+    acreciud             -> text
+    acreiden             -> text
+    acreruc              -> text
+
+  silver.maestro_articulos:
+    artcitem             -> text
+    artdes               -> text
+    artmed               -> text
+    artgrinv             -> text
+    artcosu1             -> numeric
+    artstseg             -> integer
+    artfusal             -> date
+    artfuent             -> date
+    artubi               -> text
+    artcoum1             -> numeric
+    artcmon              -> text
+    artpreu2             -> numeric
+
+  silver.articulos:
+    artcitem             -> text
+    artdes               -> text
+    artmed               -> text
+    artgrinv             -> text
+    ubialm               -> text
+    ubistock             -> numeric
+    artfusal             -> date
+    artuptrn             -> text
+    artfureq             -> date
+    artfuent             -> date
+    artfusal_1           -> date
+    artcoum1             -> numeric
+
+  silver.recepcion:
+    solnum               -> integer
+    artcitem             -> text
+    artdes               -> text
+    artmed               -> text
+    artgrinv             -> text
+    solcan               -> numeric
+    nrdcac               -> numeric
+    artstock             -> numeric
+    solpre               -> numeric
+    solmon               -> integer
+    solurg               -> text
+    solusr               -> text
+    nrcfec               -> date
+    solfec               -> date
+    nrcnum               -> integer
+    solord               -> integer
+    soltip               -> text
+    solpro               -> text
+
+  silver.solicitudes:
+    solnum               -> integer
+    artcitem             -> text
+    artdes               -> text
+    soltip               -> text
+    solcan               -> numeric
+    solurg               -> text
+    solusr               -> text
+    solfec               -> date
+    solord               -> integer
+    solmon               -> integer
+    solpre               -> numeric
+    solsts               -> text
+    solsta               -> integer
+    solpro               -> text
+    artmed               -> text
+    artgrinv             -> text
+
+======================================================================
+  MUESTRAS DE DATOS
+======================================================================
+
+  silver.solicitudes:
+    Columnas: ['solnum', 'artcitem', 'artdes', 'soltip', 'solcan', 'solurg', 'solusr', 'solfec', 'solord', 'solmon', 'solpre', 'solsts', 'solsta', 'solpro', 'artmed', 'artgrinv']
+    (623783, 'ART-16772', 'Articulo generico 16772', 'L', Decimal('300.00'), 'N', 'Usuario_35', datetime.date(2024, 9, 4), 23812, 0, Decimal('5.81'), 'R', 2, 'Proveedor_0277', 'MT', '9016')
+    (650913, 'ART-16772', 'Articulo generico 16772', 'L', Decimal('300.00'), 'N', 'Usuario_35', datetime.date(2026, 1, 21), 30955, 0, Decimal('22.04'), 'R', 2, 'Proveedor_0070', 'MT', '9016')
+    (587239, 'ART-31117', 'Articulo generico 31117', 'N', Decimal('6.00'), 'N', 'Usuario_14', datetime.date(2023, 1, 7), 15030, 0, Decimal('58.00'), 'R', 2, 'Proveedor_0098', 'PZ', '9027')
+
+  silver.recepcion:
+    Columnas: ['solnum', 'artcitem', 'artdes', 'artmed', 'artgrinv', 'solcan', 'nrdcac', 'artstock', 'solpre', 'solmon', 'solurg', 'solusr', 'nrcfec', 'solfec', 'nrcnum', 'solord', 'soltip', 'solpro']
+    (626487, 'ART-43447', 'Articulo generico 43447', 'PZ', '9801', Decimal('1.00'), Decimal('1.00'), Decimal('0.00'), Decimal('3165.04'), 1, 'N', 'Usuario_63', datetime.date(2024, 10, 22), datetime.date(2024, 10, 16), 9452, 24316, 'L', 'Proveedor_0159')
+    (627282, 'ART-43448', 'Articulo generico 43448', 'PZ', '9801', Decimal('1.00'), Decimal('1.00'), Decimal('0.00'), Decimal('2762.42'), 0, 'N', 'Usuario_63', datetime.date(2024, 10, 30), datetime.date(2024, 10, 24), 9623, 24475, 'L', 'Proveedor_0006')
+    (627730, 'ART-43448', 'Articulo generico 43448', 'PZ', '9801', Decimal('1.00'), Decimal('1.00'), Decimal('0.00'), Decimal('2762.42'), 0, 'N', 'Usuario_58', datetime.date(2024, 10, 31), datetime.date(2024, 10, 31), 9671, 24569, 'L', 'Proveedor_0006')
+
+  silver.maestro_articulos:
+    Columnas: ['artcitem', 'artdes', 'artmed', 'artgrinv', 'artcosu1', 'artstseg', 'artfusal', 'artfuent', 'artubi', 'artcoum1', 'artcmon', 'artpreu2']
+    ('ART-43447', 'Articulo generico 43447', 'PZ', '9801', Decimal('11989.17'), 0, datetime.date(2025, 1, 3), datetime.date(2024, 10, 22), '02A2', Decimal('3165.04'), None, Decimal('0.00'))
+    ('ART-43448', 'Articulo generico 43448', 'PZ', '9801', Decimal('2762.42'), 0, datetime.date(2026, 3, 13), datetime.date(2024, 10, 31), '03A3', Decimal('2762.42'), None, Decimal('0.00'))
+    ('ART-43449', 'Articulo generico 43449', 'PZ', '9801', Decimal('1752.23'), 0, datetime.date(2025, 1, 30), datetime.date(2024, 10, 30), '02A2', Decimal('1752.23'), None, Decimal('0.00'))
+
+  silver.articulos:
+    Columnas: ['artcitem', 'artdes', 'artmed', 'artgrinv', 'ubialm', 'ubistock', 'artfusal', 'artuptrn', 'artfureq', 'artfuent', 'artfusal_1', 'artcoum1']
+    ('ART-43456', 'Articulo generico 43456', 'PZ', '9801', '40', Decimal('1.00'), datetime.date(2025, 11, 7), '0', None, datetime.date(2025, 11, 7), datetime.date(2025, 11, 7), Decimal('1750.00'))
+    ('ART-43457', 'Articulo generico 43457', 'PZ', '9801', '40', Decimal('1.00'), datetime.date(2025, 5, 13), '0', None, datetime.date(2025, 5, 7), datetime.date(2025, 5, 13), Decimal('16387.50'))
+    ('ART-43459', 'Articulo generico 43459', 'PZ', '9801', '40', Decimal('2.00'), None, '0', None, datetime.date(2025, 7, 4), None, Decimal('13849.54'))
+
+  silver.proveedores:
+    Columnas: ['acrecodi', 'acreraso', 'acredire', 'acretelf', 'acreciud', 'acreiden', 'acreruc']
+    ('Proveedor_0002', 'Proveedor_0002', 'Direccion ficticia 2', '900000002', 'Ciudad_B', None, '20000000001')
+    ('Proveedor_0003', 'Proveedor_0003', 'Direccion ficticia 3', '900000003', 'Ciudad_C', None, '20000000002')
+    ('Proveedor_0004', 'Proveedor_0004', 'Direccion ficticia 4', '900000004', 'Ciudad_D', None, '20000000003')

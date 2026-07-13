@@ -1,0 +1,58 @@
+======================================================================
+  FASE 1: ANALISIS DE CALIDAD DE DATOS - BRONZE
+  Fecha: 2026-07-12 19:27
+======================================================================
+
+----------------------------------------------------------------------
+  TABLA: bronze.solicitudes
+----------------------------------------------------------------------
+  Total filas: 41971
+  Distinct solnum: 41971
+  Valores vacios/nulos: ninguno
+
+----------------------------------------------------------------------
+  TABLA: bronze.recepcion
+----------------------------------------------------------------------
+  Total filas: 43109
+  Distinct solnum: 39860
+  *** DUPLICADOS por solnum: 3249 filas
+  Valores vacios/nulos:
+    nrcgui: 28 (0.1%)
+
+----------------------------------------------------------------------
+  TABLA: bronze.maestro_articulos
+----------------------------------------------------------------------
+  Total filas: 43255
+  Distinct artcitem: 43255
+  Valores vacios/nulos:
+    artfusal: 12696 (29.4%)
+    artfuent: 13364 (30.9%)
+    artubi: 21328 (49.3%)
+    artcmon: 20578 (47.6%)
+
+----------------------------------------------------------------------
+  TABLA: bronze.articulos
+----------------------------------------------------------------------
+  Total filas: 4130
+  Distinct artcitem: 3648
+  *** DUPLICADOS por artcitem: 482 filas
+  Valores vacios/nulos:
+    artfusal: 257 (6.2%)
+    artfureq: 4019 (97.3%)
+    artfuent: 38 (0.9%)
+    artfusal_1: 257 (6.2%)
+
+----------------------------------------------------------------------
+  TABLA: bronze.grupos
+----------------------------------------------------------------------
+  Total filas: 32
+  Distinct artgrinv: 32
+  Valores vacios/nulos: ninguno
+
+----------------------------------------------------------------------
+  TABLA: bronze.proveedores
+----------------------------------------------------------------------
+  Total filas: 456
+  Distinct acrecodi: 456
+  Valores vacios/nulos:
+    acreiden: 456 (100.0%)
