@@ -22,6 +22,20 @@ def cargar_datos(consulta):
     conn = conectar()
     return pd.read_sql(consulta, conn)
 
+# Stock recibido por mes. Como lo usamos en tres lados, una sola funcion y listo.
+def cargar_stock_mensual():
+    df = cargar_datos("""
+        SELECT DATE_TRUNC('month', nrcfec)::date as mes, SUM(artstock) as stock_total
+        FROM silver.recepcion
+        WHERE nrcfec IS NOT NULL
+        GROUP BY DATE_TRUNC('month', nrcfec)::date
+        ORDER BY mes
+    """)
+    df.rename(columns={"mes": "ds", "stock_total": "y"}, inplace=True)
+    # prophet no acepta fechas con zona horaria ni como objeto date
+    df["ds"] = pd.to_datetime(df["ds"])
+    return df
+
 # Modelo de stock con Prophet. Lo dejamos cacheado en memoria para que
 # Proyecciones y el Diagnostico compartan el mismo entrenamiento.
 @st.cache_resource(show_spinner="Entrenando modelo Prophet...")
@@ -41,7 +55,7 @@ st.subheader("Analisis de datos de inventario y compras")
 # barra lateral con opciones
 opcion = st.sidebar.selectbox(
     "Selecciona una seccion",
-    ["Resumen General", "Solicitudes", "Recepcion", "Articulos", "Proyecciones", "Diagnostico Prophet"]
+    ["Resumen General", "Solicitudes", "Recepcion", "Articulos", "Proyecciones", "Diagnostico Prophet", "Diagnostico Numpy"]
 )
 
 # ============================================
@@ -258,16 +272,7 @@ elif opcion == "Proyecciones":
     st.subheader("Analisis de Tendencias de Stock")
     try:
         # stock recibido por mes; asi Prophet no se atraganta con 900+ dias
-        df_stock = cargar_datos("""
-            SELECT DATE_TRUNC('month', nrcfec)::date as mes, SUM(artstock) as stock_total
-            FROM silver.recepcion
-            WHERE nrcfec IS NOT NULL
-            GROUP BY DATE_TRUNC('month', nrcfec)::date
-            ORDER BY mes
-        """)
-        df_stock.rename(columns={"mes": "ds", "stock_total": "y"}, inplace=True)
-        # prophet no acepta fechas con zona horaria ni como objeto date
-        df_stock["ds"] = pd.to_datetime(df_stock["ds"])
+        df_stock = cargar_stock_mensual()
 
         # el modelo ya quedo cacheado arriba, aqui solo graficamos
         modelo = modelo_prophet(df_stock)
@@ -294,15 +299,7 @@ elif opcion == "Diagnostico Prophet":
 
     try:
         # mismos datos mensuales que en Proyecciones, para compartir el modelo
-        df_stock = cargar_datos("""
-            SELECT DATE_TRUNC('month', nrcfec)::date as mes, SUM(artstock) as stock_total
-            FROM silver.recepcion
-            WHERE nrcfec IS NOT NULL
-            GROUP BY DATE_TRUNC('month', nrcfec)::date
-            ORDER BY mes
-        """)
-        df_stock.rename(columns={"mes": "ds", "stock_total": "y"}, inplace=True)
-        df_stock["ds"] = pd.to_datetime(df_stock["ds"])
+        df_stock = cargar_stock_mensual()
 
         modelo = modelo_prophet(df_stock)
         futuro = modelo.make_future_dataframe(periods=6, freq="MS")
@@ -325,6 +322,51 @@ elif opcion == "Diagnostico Prophet":
         st.caption("La banda sombreada muestra el rango de incertidumbre del pronostico.")
     except Exception as e:
         st.warning(f"No se pudo generar el diagnostico: {e}")
+
+# ============================================
+# SECCION: DIAGNOSTICO NUMPY
+# ============================================
+elif opcion == "Diagnostico Numpy":
+    st.header("Diagnostico con Regresion Lineal (numpy)")
+    st.subheader("Tendencia de stock a 6 meses con banda de incertidumbre")
+
+    try:
+        import numpy as np
+
+        df_stock = cargar_stock_mensual()
+
+        # el clasico ajuste lineal que ya usamos en solicitudes
+        x = np.arange(len(df_stock))
+        y = df_stock["y"].values
+        z = np.polyfit(x, y, 1)
+        p = np.poly1d(z)
+
+        # proyectar 6 meses mas
+        x_futuro = np.arange(len(df_stock), len(df_stock) + 6)
+        y_futuro = p(x_futuro)
+
+        # banda de incertidumbre a partir del error del ajuste
+        residuo = y - p(x)
+        banda = 1.96 * residuo.std()
+        fechas_futuro = pd.date_range(start=df_stock["ds"].max(), periods=7, freq="MS")[1:]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_stock["ds"], y=df_stock["y"],
+                                 mode="lines+markers", name="Historico"))
+        # banda de incertidumbre
+        fig.add_trace(go.Scatter(
+            x=fechas_futuro.tolist() + fechas_futuro.tolist()[::-1],
+            y=(y_futuro + banda).tolist() + (y_futuro - banda).tolist()[::-1],
+            fill="toself", fillcolor="rgba(33,150,243,0.15)",
+            line=dict(width=0), name="Incertidumbre", hoverinfo="skip"
+        ))
+        fig.add_trace(go.Scatter(x=fechas_futuro, y=y_futuro,
+                                 mode="lines", name="Pronostico",
+                                 line=dict(dash="dash", color="#2196F3")))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Banda basada en el error del ajuste lineal (1.96 * desviacion).")
+    except Exception as e:
+        st.warning(f"No se pudo generar el diagnostico numpy: {e}")
 
 # ============================================
 # PIE DE PAGINA
