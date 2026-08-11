@@ -48,6 +48,35 @@ def cargar_stock_mensual():
     df["ds"] = pd.to_datetime(df["ds"])
     return df
 
+# Participacion de cada producto en el stock total de los ultimos 12 meses.
+# Sirve para repartir el pronostico mensual entre los productos, porque
+# los modelos predicen el total y no cada articulo (quien dijo que era facil).
+def cargar_participacion_productos():
+    df = cargar_datos("""
+        SELECT r.artcitem, r.artdes, g.nombre as grupo,
+               SUM(r.artstock) as stock_total
+        FROM silver.recepcion r
+        LEFT JOIN silver.grupos g ON r.artgrinv = g.artgrinv
+        WHERE r.nrcfec >= (SELECT MAX(nrcfec) - INTERVAL '12 months' FROM silver.recepcion)
+          AND r.artstock IS NOT NULL
+        GROUP BY r.artcitem, r.artdes, g.nombre
+    """)
+    df["participacion"] = df["stock_total"] / df["stock_total"].sum()
+    return df
+
+# Convierte el pronostico total de cada mes en una tabla producto por producto.
+# Reparte la cantidad segun la participacion y deja solo el top de cada mes.
+def tabla_productos_por_fecha(pronostico, fechas_futuro, participacion):
+    filas = []
+    for mes, cantidad_total in zip(fechas_futuro, pronostico):
+        df_mes = participacion.copy()
+        df_mes["cantidad_estimada"] = df_mes["participacion"] * cantidad_total
+        df_mes = df_mes.sort_values("cantidad_estimada", ascending=False).head(15)
+        df_mes["mes"] = mes
+        filas.append(df_mes)
+    tabla = pd.concat(filas, ignore_index=True)
+    return tabla[["artcitem", "artdes", "grupo", "mes", "cantidad_estimada"]]
+
 # Modelo de stock con Prophet. Lo dejamos cacheado en memoria para que
 # Proyecciones y el Diagnostico compartan el mismo entrenamiento.
 @st.cache_resource(show_spinner="Entrenando modelo Prophet...")
@@ -438,6 +467,14 @@ elif opcion == "Diagnostico Prophet":
                                  line=dict(dash="dash", color="green")))
         st.plotly_chart(fig, use_container_width=True)
         st.caption("La banda sombreada muestra el rango de incertidumbre del pronostico.")
+
+        # productos que se solicitarian cada mes segun este pronostico
+        st.subheader("Productos y fechas de solicitud segun la prediccion")
+        participacion = cargar_participacion_productos()
+        pronostico_total = pred["yhat"].tail(6).values
+        fechas_futuro = pred["ds"].tail(6)
+        st.dataframe(tabla_productos_por_fecha(pronostico_total, fechas_futuro, participacion),
+                     use_container_width=True)
     except Exception as e:
         st.warning(f"No se pudo generar el diagnostico: {e}")
 
@@ -483,6 +520,12 @@ elif opcion == "Diagnostico Numpy":
                                  line=dict(dash="dash", color="#2196F3")))
         st.plotly_chart(fig, use_container_width=True)
         st.caption("Banda basada en el error del ajuste lineal (1.96 * desviacion).")
+
+        # productos que se solicitarian cada mes segun esta proyeccion
+        st.subheader("Productos y fechas de solicitud segun la prediccion")
+        participacion = cargar_participacion_productos()
+        st.dataframe(tabla_productos_por_fecha(y_futuro, fechas_futuro, participacion),
+                     use_container_width=True)
     except Exception as e:
         st.warning(f"No se pudo generar el diagnostico numpy: {e}")
 
@@ -514,6 +557,12 @@ elif opcion == "Diagnostico Keras":
                                  line=dict(dash="dash", color="#FF9800")))
         st.plotly_chart(fig, use_container_width=True)
         st.caption("Red neuronal (MLP) entrenada con los ultimos 12 meses. Banda basada en el error del ajuste.")
+
+        # productos que se solicitarian cada mes segun esta red
+        st.subheader("Productos y fechas de solicitud segun la prediccion")
+        participacion = cargar_participacion_productos()
+        st.dataframe(tabla_productos_por_fecha(pronostico, fechas_futuro, participacion),
+                     use_container_width=True)
     except Exception as e:
         st.warning(f"No se pudo generar el diagnostico keras: {e}")
 
@@ -545,6 +594,12 @@ elif opcion == "Diagnostico PyTorch":
                                  line=dict(dash="dash", color="#9C27B0")))
         st.plotly_chart(fig, use_container_width=True)
         st.caption("Red neuronal (MLP) con PyTorch. Banda basada en el error del ajuste.")
+
+        # productos que se solicitarian cada mes segun esta red
+        st.subheader("Productos y fechas de solicitud segun la prediccion")
+        participacion = cargar_participacion_productos()
+        st.dataframe(tabla_productos_por_fecha(pronostico, fechas_futuro, participacion),
+                     use_container_width=True)
     except Exception as e:
         st.warning(f"No se pudo generar el diagnostico pytorch: {e}")
 
