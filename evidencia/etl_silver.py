@@ -1,17 +1,23 @@
-import psycopg2
 import os
+
+import psycopg2
+from dotenv import load_dotenv
 from datetime import datetime
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROYECTO_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir))
+load_dotenv(os.path.join(_PROYECTO_DIR, ".env"))
+
 DB_CONFIG = {
-    "host": "aws-1-us-west-2.pooler.supabase.com",
-    "port": 5432,
-    "dbname": "postgres",
-    "user": "postgres.xncfnyuaegllaubvdrqi",
-    "password": "buafaugwwcqsbrwaycro",
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "dbname": os.getenv("DB_NAME", "postgres"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
 }
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = SCRIPT_DIR
+
 
 def get_conn():
     return psycopg2.connect(**DB_CONFIG)
