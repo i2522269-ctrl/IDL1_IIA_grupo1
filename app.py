@@ -8,17 +8,27 @@ from datetime import datetime
 # ============================================
 # CONEXION A SUPABASE
 # ============================================
-# Credenciales desde secrets para no andarlas regalando en el repo.
-# En local se leen de .streamlit/secrets.toml y en la nube de las secrets.
+# Intenta con las secrets primero (local o nube configurada), y si no hay,
+# usa los valores de respaldo para que la app no se caiga en la nube.
+# Ojo: el respaldo queda en el repo, no lo toques si no es necesario.
 @st.cache_resource
 def conectar():
-    return psycopg2.connect(
-        host=st.secrets["DB_HOST"],
-        port=st.secrets["DB_PORT"],
-        dbname=st.secrets["DB_NAME"],
-        user=st.secrets["DB_USER"],
-        password=st.secrets["DB_PASSWORD"]
-    )
+    try:
+        return psycopg2.connect(
+            host=st.secrets["DB_HOST"],
+            port=st.secrets["DB_PORT"],
+            dbname=st.secrets["DB_NAME"],
+            user=st.secrets["DB_USER"],
+            password=st.secrets["DB_PASSWORD"]
+        )
+    except KeyError:
+        return psycopg2.connect(
+            host="aws-1-us-west-2.pooler.supabase.com",
+            port=5432,
+            dbname="postgres",
+            user="postgres.xncfnyuaegllaubvdrqi",
+            password="vU9FWYSIawOrYZ3s"
+        )
 
 def cargar_datos(consulta):
     conn = conectar()
