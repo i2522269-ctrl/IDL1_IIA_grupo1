@@ -85,4 +85,4 @@ streamlit run app.py
 - Scikit-learn
 
 ## STREAMLIT
-https://proyecto-appuctivo-iia-apl2apposugzpmtchcsoxg8.streamlit.app/
+https://idl1iiagrupo1-xujkvhuzbdgf2fz2p7qqvh.streamlit.app/
