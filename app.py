@@ -22,6 +22,16 @@ def cargar_datos(consulta):
     conn = conectar()
     return pd.read_sql(consulta, conn)
 
+# Pronostico de stock con Prophet. Reentrenarlo en cada clic es lentisimo,
+# asi que lo dejamos cacheado de una vez y no lo volvemos a sufrir.
+@st.cache_data(show_spinner="Entrenando modelo Prophet...")
+def predecir_stock(df):
+    from prophet import Prophet
+    modelo = Prophet(weekly_seasonality=False)
+    modelo.fit(df)
+    futuro = modelo.make_future_dataframe(periods=6, freq="MS")
+    return modelo.predict(futuro)
+
 # ============================================
 # PAGINA PRINCIPAL
 # ============================================
@@ -248,23 +258,31 @@ elif opcion == "Proyecciones":
     # analisis de tendencias de stock
     st.subheader("Analisis de Tendencias de Stock")
     try:
-        # esta seccion tambien falla intencionalmente
-        from prophet import Prophet
+        # stock recibido por mes; asi Prophet no se atraganta con 900+ dias
         df_stock = cargar_datos("""
-            SELECT nrcfec as ds, SUM(artstock) as y
+            SELECT DATE_TRUNC('month', nrcfec)::date as mes, SUM(artstock) as stock_total
             FROM silver.recepcion
             WHERE nrcfec IS NOT NULL
-            GROUP BY nrcfec
-            ORDER BY nrcfec
+            GROUP BY DATE_TRUNC('month', nrcfec)::date
+            ORDER BY mes
         """)
-        modelo = Prophet()
-        modelo.fit(df_stock)
-        futuro = modelo.make_future_dataframe(periods=90)
-        prediccion = modelo.predict(futuro)
-        fig = modelo.plot(prediccion)
-        st.pyplot(fig)
+        df_stock.rename(columns={"mes": "ds", "stock_total": "y"}, inplace=True)
+        # prophet no acepta fechas con zona horaria ni como objeto date
+        df_stock["ds"] = pd.to_datetime(df_stock["ds"])
+
+        # el modelo ya quedo cacheado arriba, aqui solo graficamos
+        pred = predecir_stock(df_stock)
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_stock["ds"], y=df_stock["y"],
+                                 mode="lines+markers", name="Historico"))
+        fig.add_trace(go.Scatter(x=pred["ds"], y=pred["yhat"],
+                                 mode="lines", name="Pronostico",
+                                 line=dict(dash="dash", color="green")))
+        st.plotly_chart(fig, use_container_width=True)
+        st.info("Pronostico de stock a 6 meses con Prophet")
     except Exception as e:
-        st.warning("Analisis de stock no disponible - falta configuracion de prophet")
+        st.warning(f"Analisis de stock no disponible: {e}")
 
 # ============================================
 # PIE DE PAGINA
