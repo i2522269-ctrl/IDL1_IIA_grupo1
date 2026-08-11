@@ -45,6 +45,112 @@ def modelo_prophet(df):
     modelo.fit(df)
     return modelo
 
+# Red neuronal con Keras para el stock mensual. Cacheada, obvio,
+# porque entrenar redes en cada clic seria el colmo.
+@st.cache_resource(show_spinner="Entrenando red neuronal (Keras)...")
+def entrenar_keras(df):
+    import numpy as np
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense
+
+    # normalizamos para que la red no se pierda con numeros enormes
+    y = df["y"].values
+    ymin, ymax = y.min(), y.max()
+    y_norm = (y - ymin) / (ymax - ymin)
+
+    # ventana deslizante: con los ultimos 12 meses predecimos el siguiente
+    ventana = 12
+    X, Y = [], []
+    for i in range(len(y_norm) - ventana):
+        X.append(y_norm[i:i + ventana])
+        Y.append(y_norm[i + ventana])
+    X = np.array(X)
+    Y = np.array(Y)
+
+    modelo = Sequential([
+        Dense(32, activation="relu", input_shape=(ventana,)),
+        Dense(16, activation="relu"),
+        Dense(1)
+    ])
+    modelo.compile(optimizer="adam", loss="mse")
+    modelo.fit(X, Y, epochs=300, verbose=0)
+
+    # pronostico iterativo: la red se alimenta de su propia salida
+    ultimo = y_norm[-ventana:].copy()
+    pronostico_norm = []
+    for _ in range(6):
+        pred = float(modelo.predict(ultimo.reshape(1, -1), verbose=0)[0, 0])
+        pronostico_norm.append(pred)
+        ultimo = np.append(ultimo[1:], pred)
+
+    # banda de incertidumbre con el error del ajuste sobre el historico
+    ajuste_norm = modelo.predict(X, verbose=0).flatten()
+    ajuste = ajuste_norm * (ymax - ymin) + ymin
+    banda = 1.96 * (y[ventana:] - ajuste).std()
+
+    pronostico = np.array(pronostico_norm) * (ymax - ymin) + ymin
+    return pronostico, banda
+
+# Igual que Keras pero con PyTorch, por si la profe pregunta por este.
+@st.cache_resource(show_spinner="Entrenando red neuronal (PyTorch)...")
+def entrenar_torch(df):
+    import numpy as np
+    import torch
+    import torch.nn as nn
+
+    y = df["y"].values
+    ymin, ymax = y.min(), y.max()
+    y_norm = (y - ymin) / (ymax - ymin)
+
+    ventana = 12
+    X, Y = [], []
+    for i in range(len(y_norm) - ventana):
+        X.append(y_norm[i:i + ventana])
+        Y.append(y_norm[i + ventana])
+    X = torch.tensor(np.array(X), dtype=torch.float32)
+    Y = torch.tensor(np.array(Y), dtype=torch.float32)
+
+    class MiniRed(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.capa = nn.Sequential(
+                nn.Linear(ventana, 32),
+                nn.ReLU(),
+                nn.Linear(32, 16),
+                nn.ReLU(),
+                nn.Linear(16, 1)
+            )
+
+        def forward(self, x):
+            return self.capa(x)
+
+    modelo = MiniRed()
+    optimizador = torch.optim.Adam(modelo.parameters())
+    perdida = nn.MSELoss()
+
+    for _ in range(500):
+        optimizador.zero_grad()
+        loss = perdida(modelo(X).squeeze(), Y)
+        loss.backward()
+        optimizador.step()
+
+    # pronostico iterativo igual que en Keras
+    ultimo = torch.tensor(y_norm[-ventana:], dtype=torch.float32)
+    pronostico_norm = []
+    for _ in range(6):
+        pred = modelo(ultimo).item()
+        pronostico_norm.append(pred)
+        ultimo = torch.cat([ultimo[1:], torch.tensor([pred])])
+
+    # banda con el error del ajuste
+    with torch.no_grad():
+        ajuste_norm = modelo(X).squeeze().numpy()
+    ajuste = ajuste_norm * (ymax - ymin) + ymin
+    banda = 1.96 * (y[ventana:] - ajuste).std()
+
+    pronostico = np.array(pronostico_norm) * (ymax - ymin) + ymin
+    return pronostico, banda
+
 # ============================================
 # PAGINA PRINCIPAL
 # ============================================
@@ -55,7 +161,7 @@ st.subheader("Analisis de datos de inventario y compras")
 # barra lateral con opciones
 opcion = st.sidebar.selectbox(
     "Selecciona una seccion",
-    ["Resumen General", "Solicitudes", "Recepcion", "Articulos", "Proyecciones", "Diagnostico Prophet", "Diagnostico Numpy"]
+    ["Resumen General", "Solicitudes", "Recepcion", "Articulos", "Proyecciones", "Diagnostico Prophet", "Diagnostico Numpy", "Diagnostico Keras", "Diagnostico PyTorch"]
 )
 
 # ============================================
@@ -367,6 +473,68 @@ elif opcion == "Diagnostico Numpy":
         st.caption("Banda basada en el error del ajuste lineal (1.96 * desviacion).")
     except Exception as e:
         st.warning(f"No se pudo generar el diagnostico numpy: {e}")
+
+# ============================================
+# SECCION: DIAGNOSTICO KERAS
+# ============================================
+elif opcion == "Diagnostico Keras":
+    st.header("Diagnostico con Red Neuronal (TensorFlow/Keras)")
+    st.subheader("Tendencia de stock a 6 meses con banda de incertidumbre")
+
+    try:
+        df_stock = cargar_stock_mensual()
+
+        pronostico, banda = entrenar_keras(df_stock)
+        fechas_futuro = pd.date_range(start=df_stock["ds"].max(), periods=7, freq="MS")[1:]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_stock["ds"], y=df_stock["y"],
+                                 mode="lines+markers", name="Historico"))
+        # banda de incertidumbre
+        fig.add_trace(go.Scatter(
+            x=fechas_futuro.tolist() + fechas_futuro.tolist()[::-1],
+            y=(pronostico + banda).tolist() + (pronostico - banda).tolist()[::-1],
+            fill="toself", fillcolor="rgba(255,152,0,0.15)",
+            line=dict(width=0), name="Incertidumbre", hoverinfo="skip"
+        ))
+        fig.add_trace(go.Scatter(x=fechas_futuro, y=pronostico,
+                                 mode="lines", name="Pronostico",
+                                 line=dict(dash="dash", color="#FF9800")))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Red neuronal (MLP) entrenada con los ultimos 12 meses. Banda basada en el error del ajuste.")
+    except Exception as e:
+        st.warning(f"No se pudo generar el diagnostico keras: {e}")
+
+# ============================================
+# SECCION: DIAGNOSTICO PYTORCH
+# ============================================
+elif opcion == "Diagnostico PyTorch":
+    st.header("Diagnostico con Red Neuronal (PyTorch)")
+    st.subheader("Tendencia de stock a 6 meses con banda de incertidumbre")
+
+    try:
+        df_stock = cargar_stock_mensual()
+
+        pronostico, banda = entrenar_torch(df_stock)
+        fechas_futuro = pd.date_range(start=df_stock["ds"].max(), periods=7, freq="MS")[1:]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_stock["ds"], y=df_stock["y"],
+                                 mode="lines+markers", name="Historico"))
+        # banda de incertidumbre
+        fig.add_trace(go.Scatter(
+            x=fechas_futuro.tolist() + fechas_futuro.tolist()[::-1],
+            y=(pronostico + banda).tolist() + (pronostico - banda).tolist()[::-1],
+            fill="toself", fillcolor="rgba(156,39,176,0.15)",
+            line=dict(width=0), name="Incertidumbre", hoverinfo="skip"
+        ))
+        fig.add_trace(go.Scatter(x=fechas_futuro, y=pronostico,
+                                 mode="lines", name="Pronostico",
+                                 line=dict(dash="dash", color="#9C27B0")))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Red neuronal (MLP) con PyTorch. Banda basada en el error del ajuste.")
+    except Exception as e:
+        st.warning(f"No se pudo generar el diagnostico pytorch: {e}")
 
 # ============================================
 # PIE DE PAGINA
