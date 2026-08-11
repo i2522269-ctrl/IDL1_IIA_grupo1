@@ -5,6 +5,9 @@
 .env
 .streamlit/secrets.toml
 
+# Instrucciones locales de la IA (nunca subir a GitHub)
+AGENTS.md
+
 # Caché y archivos temporales
 __pycache__/
 *.pyc
