@@ -22,15 +22,14 @@ def cargar_datos(consulta):
     conn = conectar()
     return pd.read_sql(consulta, conn)
 
-# Pronostico de stock con Prophet. Reentrenarlo en cada clic es lentisimo,
-# asi que lo dejamos cacheado de una vez y no lo volvemos a sufrir.
-@st.cache_data(show_spinner="Entrenando modelo Prophet...")
-def predecir_stock(df):
+# Modelo de stock con Prophet. Lo dejamos cacheado en memoria para que
+# Proyecciones y el Diagnostico compartan el mismo entrenamiento.
+@st.cache_resource(show_spinner="Entrenando modelo Prophet...")
+def modelo_prophet(df):
     from prophet import Prophet
     modelo = Prophet(weekly_seasonality=False)
     modelo.fit(df)
-    futuro = modelo.make_future_dataframe(periods=6, freq="MS")
-    return modelo.predict(futuro)
+    return modelo
 
 # ============================================
 # PAGINA PRINCIPAL
@@ -42,7 +41,7 @@ st.subheader("Analisis de datos de inventario y compras")
 # barra lateral con opciones
 opcion = st.sidebar.selectbox(
     "Selecciona una seccion",
-    ["Resumen General", "Solicitudes", "Recepcion", "Articulos", "Proyecciones"]
+    ["Resumen General", "Solicitudes", "Recepcion", "Articulos", "Proyecciones", "Diagnostico Prophet"]
 )
 
 # ============================================
@@ -271,7 +270,9 @@ elif opcion == "Proyecciones":
         df_stock["ds"] = pd.to_datetime(df_stock["ds"])
 
         # el modelo ya quedo cacheado arriba, aqui solo graficamos
-        pred = predecir_stock(df_stock)
+        modelo = modelo_prophet(df_stock)
+        futuro = modelo.make_future_dataframe(periods=6, freq="MS")
+        pred = modelo.predict(futuro)
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df_stock["ds"], y=df_stock["y"],
@@ -283,6 +284,47 @@ elif opcion == "Proyecciones":
         st.info("Pronostico de stock a 6 meses con Prophet")
     except Exception as e:
         st.warning(f"Analisis de stock no disponible: {e}")
+
+# ============================================
+# SECCION: DIAGNOSTICO PROPHET
+# ============================================
+elif opcion == "Diagnostico Prophet":
+    st.header("Diagnostico del Modelo Prophet")
+    st.subheader("Pronostico de stock a 6 meses con banda de incertidumbre")
+
+    try:
+        # mismos datos mensuales que en Proyecciones, para compartir el modelo
+        df_stock = cargar_datos("""
+            SELECT DATE_TRUNC('month', nrcfec)::date as mes, SUM(artstock) as stock_total
+            FROM silver.recepcion
+            WHERE nrcfec IS NOT NULL
+            GROUP BY DATE_TRUNC('month', nrcfec)::date
+            ORDER BY mes
+        """)
+        df_stock.rename(columns={"mes": "ds", "stock_total": "y"}, inplace=True)
+        df_stock["ds"] = pd.to_datetime(df_stock["ds"])
+
+        modelo = modelo_prophet(df_stock)
+        futuro = modelo.make_future_dataframe(periods=6, freq="MS")
+        pred = modelo.predict(futuro)
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_stock["ds"], y=df_stock["y"],
+                                 mode="lines+markers", name="Historico"))
+        # banda de incertidumbre que diagnostica el modelo
+        fig.add_trace(go.Scatter(
+            x=pred["ds"].tolist() + pred["ds"].tolist()[::-1],
+            y=pred["yhat_upper"].tolist() + pred["yhat_lower"].tolist()[::-1],
+            fill="toself", fillcolor="rgba(0,128,0,0.15)",
+            line=dict(width=0), name="Incertidumbre", hoverinfo="skip"
+        ))
+        fig.add_trace(go.Scatter(x=pred["ds"], y=pred["yhat"],
+                                 mode="lines", name="Pronostico",
+                                 line=dict(dash="dash", color="green")))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("La banda sombreada muestra el rango de incertidumbre del pronostico.")
+    except Exception as e:
+        st.warning(f"No se pudo generar el diagnostico: {e}")
 
 # ============================================
 # PIE DE PAGINA
