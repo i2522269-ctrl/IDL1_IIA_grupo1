@@ -75,7 +75,12 @@ def tabla_productos_por_fecha(pronostico, fechas_futuro, participacion):
         df_mes["mes"] = mes
         filas.append(df_mes)
     tabla = pd.concat(filas, ignore_index=True)
-    return tabla[["artcitem", "artdes", "grupo", "mes", "cantidad_estimada"]]
+    # fecha aproximada de solicitud: los de mayor cantidad primero en el mes,
+    # porque pedir mucho de golpe nunca sale bien si lo dejas para el final.
+    tabla["fecha_sugerida"] = tabla["mes"] + pd.to_timedelta(
+        tabla.groupby("mes").cumcount(), unit="D"
+    )
+    return tabla[["artcitem", "artdes", "grupo", "mes", "fecha_sugerida", "cantidad_estimada"]]
 
 # Modelo de stock con Prophet. Lo dejamos cacheado en memoria para que
 # Proyecciones y el Diagnostico compartan el mismo entrenamiento.
