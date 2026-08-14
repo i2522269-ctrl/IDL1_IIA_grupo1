@@ -1,0 +1,24 @@
+======================================================================
+  FASE 1: REPRODUCIBILIDAD - GOLD ACTUAL vs CONSULTAS
+  Fecha: 2026-08-14 09:19
+  (solo lectura, las tablas gold no se tocan en esta fase)
+======================================================================
+
+  [metricas_prediccion_proveedor]  fuente: normalizado
+    filas en gold actual : 383
+    filas repro normalizado: 383
+    filas con diferencia : 0
+    resultado: REPRODUCE EXACTO
+
+  [prediccion_demanda_mensual]  fuente: silver.recepcion
+    (ironia documentada en sql/gold.sql: la normalizacion pierde
+     los huerfanos y este conteo los necesita, asi que silver)
+    gold_total  : 33,010
+    repro_total : 33,010
+    sin_key     : 0
+    extras      : 0
+    dif_total   : 0
+    resultado: REPRODUCE EXACTO
+
+  Resumen: si ambos dicen REPRODUCE EXACTO, regenerar gold
+  no cambia ni un numero y podemos borrar y recrear tranquilos.

@@ -1,0 +1,75 @@
+======================================================================
+  FASE 3: VERIFICACION FINAL - GOLD
+  Fecha: 2026-08-14 09:19
+======================================================================
+
+
+----------------------------------------------------------------------
+  CONTEO FINAL vs ESPERADO
+----------------------------------------------------------------------
+  metricas_prediccion_proveedor: 383  (esperado: 383)  OK
+  prediccion_demanda_mensual   : 33,010  (esperado: 33,010)  OK
+
+
+----------------------------------------------------------------------
+  TIPOS DE DATOS EN GOLD
+----------------------------------------------------------------------
+
+  gold.metricas_prediccion_proveedor:
+    proveedor_id               -> text
+    total_atenciones           -> bigint
+    lead_time_promedio_dias    -> numeric
+    desviacion_lead_time       -> numeric
+    volumen_total_suministrado -> numeric
+
+  gold.prediccion_demanda_mensual:
+    artcitem                   -> text
+    artgrinv                   -> text
+    grupo_nombre               -> text
+    periodo_mes                -> timestamp with time zone
+    cantidad_total_despachada  -> numeric
+    frecuencia_pedidos         -> bigint
+    precio_promedio_pactado    -> numeric
+    ultimo_stock_registrado    -> numeric
+
+
+----------------------------------------------------------------------
+  MUESTRAS DE DATOS
+----------------------------------------------------------------------
+
+  gold.metricas_prediccion_proveedor:
+    Columnas: ['proveedor_id', 'total_atenciones', 'lead_time_promedio_dias', 'desviacion_lead_time', 'volumen_total_suministrado']
+    ('Proveedor_0366', 51, Decimal('35.9019607843137255'), Decimal('45.8803901038170269'), Decimal('1927.00'))
+    ('Proveedor_0153', 220, Decimal('21.2954545454545455'), Decimal('18.9300316419693546'), Decimal('6897.00'))
+    ('Proveedor_0176', 39, Decimal('76.6666666666666667'), Decimal('21.2098950757142365'), Decimal('2829.00'))
+
+  gold.prediccion_demanda_mensual (el huerfano del catalogo):
+    ('ART-18598', 'I582', None, datetime.datetime(2024, 11, 1, 0, 0, tzinfo=datetime.timezone.utc), Decimal('102.00'), 1, Decimal('26.0000000000000000'), Decimal('82.00'))
+
+  gold.prediccion_demanda_mensual (muestra general):
+    Columnas: ['artcitem', 'artgrinv', 'grupo_nombre', 'periodo_mes', 'cantidad_total_despachada', 'frecuencia_pedidos', 'precio_promedio_pactado', 'ultimo_stock_registrado']
+    ('ART-01309', '9004', 'TINTES Y COLORANTES', datetime.datetime(2024, 12, 1, 0, 0, tzinfo=datetime.timezone.utc), Decimal('25.00'), 1, Decimal('31.0000000000000000'), Decimal('29.87'))
+    ('ART-01314', '9004', 'TINTES Y COLORANTES', datetime.datetime(2023, 5, 1, 0, 0, tzinfo=datetime.timezone.utc), Decimal('60.00'), 1, Decimal('45.0000000000000000'), Decimal('82862.47'))
+    ('ART-01314', '9004', 'TINTES Y COLORANTES', datetime.datetime(2024, 12, 1, 0, 0, tzinfo=datetime.timezone.utc), Decimal('50.00'), 1, Decimal('43.9000000000000000'), Decimal('82862.47'))
+
+
+----------------------------------------------------------------------
+  REPRODUCIBILIDAD POST-CARGA (los mismos numeros que la fase 1)
+----------------------------------------------------------------------
+    gold_total  : 33,010
+    repro_total : 33,010
+    sin_key     : 0
+    extras      : 0
+    dif_total   : 0
+    resultado: REPRODUCE EXACTO
+    metricas: repro=383 diffs=0 -> REPRODUCE EXACTO
+
+
+----------------------------------------------------------------------
+  CHECK: consulta analitica sobre gold
+----------------------------------------------------------------------
+    mes=2026-06-01 articulos=679 demanda_total=189191.16
+    mes=2026-05-01 articulos=826 demanda_total=315075.22
+    mes=2026-04-01 articulos=811 demanda_total=237406.22
+    mes=2026-03-01 articulos=794 demanda_total=250127.41
+    mes=2026-02-01 articulos=649 demanda_total=179047.78

@@ -8,27 +8,40 @@ from datetime import datetime
 # ============================================
 # CONEXION A SUPABASE
 # ============================================
-# Intenta con las secrets primero (local o nube configurada), y si no hay,
-# usa los valores de respaldo para que la app no se caiga en la nube.
-# Ojo: el respaldo queda en el repo, no lo toques si no es necesario.
+# Las credenciales viven en .streamlit/secrets.toml (nube) o en .env
+# (local). Nada de passwords en el codigo: la unica vez que dejamos una
+# hardcodeada quedo un susto en el historial de git.
 @st.cache_resource
 def conectar():
+    import os
+    from dotenv import load_dotenv
+
+    # primero las secrets de la nube; si no hay, bajamos al .env local.
+    # Si tampoco esta, que truene con un mensaje que diga que configurar.
     try:
-        return psycopg2.connect(
-            host=st.secrets["DB_HOST"],
-            port=st.secrets["DB_PORT"],
-            dbname=st.secrets["DB_NAME"],
-            user=st.secrets["DB_USER"],
-            password=st.secrets["DB_PASSWORD"]
+        cfg = {
+            "host": st.secrets["DB_HOST"],
+            "port": int(st.secrets["DB_PORT"]),
+            "dbname": st.secrets["DB_NAME"],
+            "user": st.secrets["DB_USER"],
+            "password": st.secrets["DB_PASSWORD"],
+        }
+    except Exception:
+        load_dotenv()
+        cfg = {
+            "host": os.getenv("DB_HOST"),
+            "port": int(os.getenv("DB_PORT", "5432")),
+            "dbname": os.getenv("DB_NAME", "postgres"),
+            "user": os.getenv("DB_USER"),
+            "password": os.getenv("DB_PASSWORD"),
+        }
+
+    if not cfg["host"] or not cfg["user"] or not cfg["password"]:
+        raise RuntimeError(
+            "Credenciales no encontradas. Configura .streamlit/secrets.toml (nube) o .env (local)."
         )
-    except KeyError:
-        return psycopg2.connect(
-            host="aws-1-us-west-2.pooler.supabase.com",
-            port=5432,
-            dbname="postgres",
-            user="postgres.xncfnyuaegllaubvdrqi",
-            password="vU9FWYSIawOrYZ3s"
-        )
+
+    return psycopg2.connect(**cfg)
 
 def cargar_datos(consulta):
     conn = conectar()
@@ -92,16 +105,30 @@ def modelo_prophet(df):
 @st.cache_resource(show_spinner="Entrenando red neuronal (Keras)...")
 def entrenar_keras(df):
     import numpy as np
+    import tensorflow as tf
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense
 
+    # semilla unica para python/numpy/tf; sin esto el pronostico cambia
+    # de un clic a otro y nadie nos cree la evidencia
+    tf.keras.utils.set_random_seed(42)
+
     # normalizamos para que la red no se pierda con numeros enormes
     y = df["y"].values
+    if len(y) == 0:
+        return np.full(6, 0.0), 0.0
     ymin, ymax = y.min(), y.max()
+
+    ventana = 12
+    # serie constante o historial que no alcanza para la ventana:
+    # pronostico plano y a otra cosa, una red con una sola fila no aprende
+    if ymax == ymin or len(y) <= ventana:
+        base = float(ymin) if ymax == ymin else float(y[-1])
+        return np.full(6, base), 0.0
+
     y_norm = (y - ymin) / (ymax - ymin)
 
     # ventana deslizante: con los ultimos 12 meses predecimos el siguiente
-    ventana = 12
     X, Y = [], []
     for i in range(len(y_norm) - ventana):
         X.append(y_norm[i:i + ventana])
@@ -140,11 +167,24 @@ def entrenar_torch(df):
     import torch
     import torch.nn as nn
 
+    # mismas semillas que en keras; la evidencia se toma en serio
+    np.random.seed(42)
+    torch.manual_seed(42)
+
     y = df["y"].values
+    if len(y) == 0:
+        return np.full(6, 0.0), 0.0
     ymin, ymax = y.min(), y.max()
-    y_norm = (y - ymin) / (ymax - ymin)
 
     ventana = 12
+    # el mismo rescate que en keras: sin datos suficientes no hay red
+    # que valga, pronostico plano y nos vamos
+    if ymax == ymin or len(y) <= ventana:
+        base = float(ymin) if ymax == ymin else float(y[-1])
+        return np.full(6, base), 0.0
+
+    y_norm = (y - ymin) / (ymax - ymin)
+
     X, Y = [], []
     for i in range(len(y_norm) - ventana):
         X.append(y_norm[i:i + ventana])
@@ -221,18 +261,22 @@ if opcion == "Resumen General":
 
     col1.metric("Solicitudes", f"{total_solicitudes:,}")
     col2.metric("Recepciones", f"{total_recepcion:,}")
-    col3.metric("Articulos", f"{total_articulos:,}")
+    # es el tamano del catalogo, no los que tienen stock; mejor decirlo claro
+    col3.metric("Articulos (catalogo)", f"{total_articulos:,}")
     col4.metric("Proveedores", f"{total_proveedores:,}")
 
     st.markdown("---")
 
     # articulos por grupo
     st.subheader("Articulos por Grupo")
+    # LEFT JOIN para no perder los articulos cuyo grupo no existe en el
+    # catalogo; esos 19 duenios de grupo inexistente aparecen como (sin grupo)
     df_grupos = cargar_datos("""
-        SELECT g.nombre as grupo, COUNT(DISTINCT m.artcitem) as cantidad
+        SELECT COALESCE(g.nombre, '(sin grupo)') as grupo,
+               COUNT(DISTINCT m.artcitem) as cantidad
         FROM normalizado.maestro_articulos m
-        JOIN normalizado.grupos g ON m.artgrinv = g.artgrinv
-        GROUP BY g.nombre
+        LEFT JOIN normalizado.grupos g ON m.artgrinv = g.artgrinv
+        GROUP BY COALESCE(g.nombre, '(sin grupo)')
         ORDER BY cantidad DESC, grupo
     """)
     fig = px.bar(df_grupos, x="grupo", y="cantidad", color="cantidad",
@@ -385,9 +429,10 @@ elif opcion == "Proyecciones":
         z = np.polyfit(x, y, 1)
         p = np.poly1d(z)
 
-        # predecir 6 meses mas
+        # predecir 6 meses mas; si la tendencia se va a negativo lo
+        # cortamos en cero, un pedido negativo no existe ni en broma
         x_future = np.arange(len(df_proy), len(df_proy) + 6)
-        y_future = p(x_future)
+        y_future = np.maximum(p(x_future), 0)
 
         df_futuro = pd.DataFrame({
             "mes": pd.date_range(start=df_proy["mes"].max(), periods=7, freq="MS")[1:],
@@ -503,9 +548,11 @@ elif opcion == "Diagnostico Numpy":
         z = np.polyfit(x, y, 1)
         p = np.poly1d(z)
 
-        # proyectar 6 meses mas
+        # proyectar 6 meses mas; recortamos en cero la linea central,
+        # la banda de abajo puede asomarse a negativo (es la duda del
+        # modelo, no una promesa de stock negativo)
         x_futuro = np.arange(len(df_stock), len(df_stock) + 6)
-        y_futuro = p(x_futuro)
+        y_futuro = np.maximum(p(x_futuro), 0)
 
         # banda de incertidumbre a partir del error del ajuste
         residuo = y - p(x)

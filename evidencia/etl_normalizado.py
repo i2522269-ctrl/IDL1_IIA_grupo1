@@ -8,8 +8,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROYECTO_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir))
 load_dotenv(os.path.join(_PROYECTO_DIR, ".env"))
 
-# Igual que en la app: primero probamos el .env y si falla la auth usamos
-# las de respaldo para que el ETL no truene a mitad de camino.
+# Igual que en la app: las credenciales salen del .env y nada de
+# passwords hardcodeados aca (eso ya nos dio un susto en git).
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
     "port": int(os.getenv("DB_PORT", "5432")),
@@ -18,26 +18,12 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD"),
 }
 
-# Respaldo hardcodeado por si el .env quedo con credenciales viejas
-# (spoiler: siempre queda con credenciales viejas).
-_FALLBACK = {
-    "host": "aws-1-us-west-2.pooler.supabase.com",
-    "port": 5432,
-    "dbname": "postgres",
-    "user": "postgres.xncfnyuaegllaubvdrqi",
-    "password": "vU9FWYSIawOrYZ3s",
-}
-
 OUTPUT_DIR = SCRIPT_DIR
 SQL_FILE = os.path.join(_PROYECTO_DIR, "sql", "normalizacion_3fn.sql")
 
 
 def get_conn():
-    try:
-        return psycopg2.connect(**DB_CONFIG)
-    except psycopg2.OperationalError as e:
-        print(f"  [aviso] Conexion con .env fallo ({e.__class__.__name__}); usando respaldo.")
-        return psycopg2.connect(**_FALLBACK)
+    return psycopg2.connect(**DB_CONFIG)
 
 
 def log(msg, lines=None):
