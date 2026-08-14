@@ -38,7 +38,8 @@ def conectar():
 
     if not cfg["host"] or not cfg["user"] or not cfg["password"]:
         raise RuntimeError(
-            "Credenciales no encontradas. Configura .streamlit/secrets.toml (nube) o .env (local)."
+            "Credenciales no encontradas. Configura .env (local), .streamlit/secrets.toml "
+            "(local) o Settings > Secrets (Streamlit Cloud)."
         )
 
     return psycopg2.connect(**cfg)
