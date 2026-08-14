@@ -1,0 +1,31 @@
+======================================================================
+  FASE 2: ANALISIS DE INTEGRIDAD REFERENCIAL - SILVER
+  Fecha: 2026-08-13 21:44
+======================================================================
+  recepcion.solnum sin pedido en solicitudes: 957  ***
+  recepcion.artcitem fuera de maestro_articulos: 1  ***
+  solicitudes.artcitem fuera de maestro_articulos: 722  ***
+  articulos.artcitem fuera de maestro_articulos: 0
+  solicitudes.solpro fuera de proveedores: 179  ***
+  recepcion.solpro fuera de proveedores: 0
+  maestro_articulos.artgrinv fuera de grupos: 19  ***
+  duplicados recepcion (solnum,artcitem,nrdcac): 630  ***
+  solicitudes.solnum unico (potencial PK): 0  OK
+
+  Articulos distintos fuera de catalogo en solicitudes: 231
+  Ejemplos de articulos fuera de catalogo:
+    ART-00001
+    ART-00002
+    ART-01281
+    ART-01282
+    ART-01283
+    ART-01284
+    ART-01285
+    ART-01286
+  Grupos referenciados pero inexistentes en catalogo:
+    9011
+    9801
+    9901
+
+  Estos casos se conservan en 3FN como FK con valor NULL
+  para no perder filas (la data vale mas que el orgullo).

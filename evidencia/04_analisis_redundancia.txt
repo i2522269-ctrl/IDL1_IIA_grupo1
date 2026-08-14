@@ -1,0 +1,29 @@
+======================================================================
+  FASE 1: ANALISIS DE REDUNDANCIA - SILVER
+  Fecha: 2026-08-13 21:44
+======================================================================
+
+  Columnas de catalogo repetidas en los hechos:
+    solicitudes.artdes          41,249 coinciden  ( 98.3%)  de 41,971
+    solicitudes.artmed          41,249 coinciden  ( 98.3%)  de 41,971
+    solicitudes.artgrinv        41,249 coinciden  ( 98.3%)  de 41,971
+    recepcion.artdes            43,108 coinciden  (100.0%)  de 43,109
+    recepcion.artmed            43,108 coinciden  (100.0%)  de 43,109
+    recepcion.artgrinv          43,108 coinciden  (100.0%)  de 43,109
+    articulos.artdes             4,130 coinciden  (100.0%)  de 4,130
+    articulos.artmed             4,130 coinciden  (100.0%)  de 4,130
+    articulos.artgrinv           4,130 coinciden  (100.0%)  de 4,130
+
+  Discrepancias con el maestro (dato repetido pero distinto):
+    articulos.artdes != maestro.artdes            0
+    articulos.artfusal != maestro.artfusal        4
+    articulos.artfuent != maestro.artfuent       57
+    articulos.artcoum1 != maestro.artcoum1        0
+
+  solpro en los hechos (codigo que referencia a proveedores):
+    recepcion: 383 codigos distintos
+    solicitudes: 450 codigos distintos
+    proveedores (catalogo): 456 codigos
+
+  Conclusión: artdes/artmed/artgrinv repiten el catalogo en 3 hechos
+  y se eliminan en 3FN; solpro se convierte en FK a proveedores.

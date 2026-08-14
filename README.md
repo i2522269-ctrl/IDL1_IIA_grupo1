@@ -1,6 +1,6 @@
 # Proyecto Productivo IIA
 
-Analisis predictivo de inventario y compras usando arquitectura medallion (bronze -> silver).
+Analisis predictivo de inventario y compras usando arquitectura medallion (bronze -> silver -> normalizado).
 
 ## Descripcion
 
@@ -11,12 +11,17 @@ Este proyecto analiza datos de solicitudes, recepciones, articulos y proveedores
 ```
 ├── evidencia/                    # Resultados del analisis de datos
 │   ├── etl_silver.py             # Script completo de limpieza (bronze -> silver)
+│   ├── etl_normalizado.py        # Script de normalizacion 3FN (silver -> normalizado)
 │   ├── 01_analisis_calidad_datos.txt
 │   ├── 02_analisis_duplicados.txt
 │   ├── 03_resultados_silver.txt
-│   └── limpieza_capa_silver.sql
+│   ├── 04_analisis_redundancia.txt
+│   ├── 05_integridad_referencial.txt
+│   ├── 06_resultados_normalizado.txt
+│   └── 07_carga_normalizado.txt
 ├── sql/                          # Scripts SQL
-│   └── limpieza_capa_silver.sql
+│   ├── limpieza_capa_silver.sql
+│   └── normalizacion_3fn.sql
 ├── .streamlit/secrets.toml       # Credenciales locales (NO se sube a git)
 ├── .env                          # Credenciales locales para scripts ETL (NO se sube a git)
 ├── app.py                        # Aplicacion Streamlit
@@ -64,6 +69,7 @@ streamlit run app.py
 
 - **bronze**: Datos crudos en formato texto
 - **silver**: Datos limpiados con tipos correctos
+- **normalizado**: Esquema 3FN con dimensiones y hechos (llaves foraneas)
 
 | Tabla | Registros | Descripcion |
 |-------|-----------|-------------|
@@ -73,6 +79,17 @@ streamlit run app.py
 | articulos | 4,130 | Stock por ubicacion |
 | recepcion | 43,109 | Historial de recepciones |
 | solicitudes | 41,971 | Historial de solicitudes |
+
+Esquema `normalizado` (dimensiones + hechos con FK):
+
+| Tabla | Registros | Contenido |
+|-------|-----------|-----------|
+| normalizado.grupos | 32 | Dimension de grupos |
+| normalizado.proveedores | 456 | Dimension de proveedores |
+| normalizado.maestro_articulos | 43,255 | Dimension de articulos |
+| normalizado.fact_solicitudes | 41,971 | Hecho de solicitudes (artcitem, solpro -> FK) |
+| normalizado.fact_recepcion | 43,109 | Hecho de recepciones (clave surrogate id_recepcion) |
+| normalizado.fact_stock | 4,130 | Stock por ubicacion (solo columnas propias) |
 
 ## Dependencias
 

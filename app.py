@@ -38,7 +38,7 @@ def cargar_datos(consulta):
 def cargar_stock_mensual():
     df = cargar_datos("""
         SELECT DATE_TRUNC('month', nrcfec)::date as mes, SUM(artstock) as stock_total
-        FROM silver.recepcion
+        FROM normalizado.fact_recepcion
         WHERE nrcfec IS NOT NULL
         GROUP BY DATE_TRUNC('month', nrcfec)::date
         ORDER BY mes
@@ -53,13 +53,14 @@ def cargar_stock_mensual():
 # los modelos predicen el total y no cada articulo (quien dijo que era facil).
 def cargar_participacion_productos():
     df = cargar_datos("""
-        SELECT r.artcitem, r.artdes, g.nombre as grupo,
+        SELECT r.artcitem, m.artdes, g.nombre as grupo,
                SUM(r.artstock) as stock_total
-        FROM silver.recepcion r
-        LEFT JOIN silver.grupos g ON r.artgrinv = g.artgrinv
-        WHERE r.nrcfec >= (SELECT MAX(nrcfec) - INTERVAL '12 months' FROM silver.recepcion)
+        FROM normalizado.fact_recepcion r
+        LEFT JOIN normalizado.maestro_articulos m ON r.artcitem = m.artcitem
+        LEFT JOIN normalizado.grupos g ON m.artgrinv = g.artgrinv
+        WHERE r.nrcfec >= (SELECT MAX(nrcfec) - INTERVAL '12 months' FROM normalizado.fact_recepcion)
           AND r.artstock IS NOT NULL
-        GROUP BY r.artcitem, r.artdes, g.nombre
+        GROUP BY r.artcitem, m.artdes, g.nombre
     """)
     df["participacion"] = df["stock_total"] / df["stock_total"].sum()
     return df
@@ -213,10 +214,10 @@ if opcion == "Resumen General":
 
     col1, col2, col3, col4 = st.columns(4)
 
-    total_solicitudes = cargar_datos("SELECT COUNT(*) as total FROM silver.solicitudes")["total"][0]
-    total_recepcion = cargar_datos("SELECT COUNT(*) as total FROM silver.recepcion")["total"][0]
-    total_articulos = cargar_datos("SELECT COUNT(DISTINCT artcitem) as total FROM silver.maestro_articulos")["total"][0]
-    total_proveedores = cargar_datos("SELECT COUNT(*) as total FROM silver.proveedores")["total"][0]
+    total_solicitudes = cargar_datos("SELECT COUNT(*) as total FROM normalizado.fact_solicitudes")["total"][0]
+    total_recepcion = cargar_datos("SELECT COUNT(*) as total FROM normalizado.fact_recepcion")["total"][0]
+    total_articulos = cargar_datos("SELECT COUNT(DISTINCT artcitem) as total FROM normalizado.maestro_articulos")["total"][0]
+    total_proveedores = cargar_datos("SELECT COUNT(*) as total FROM normalizado.proveedores")["total"][0]
 
     col1.metric("Solicitudes", f"{total_solicitudes:,}")
     col2.metric("Recepciones", f"{total_recepcion:,}")
@@ -229,8 +230,8 @@ if opcion == "Resumen General":
     st.subheader("Articulos por Grupo")
     df_grupos = cargar_datos("""
         SELECT g.nombre as grupo, COUNT(DISTINCT m.artcitem) as cantidad
-        FROM silver.maestro_articulos m
-        JOIN silver.grupos g ON m.artgrinv = g.artgrinv
+        FROM normalizado.maestro_articulos m
+        JOIN normalizado.grupos g ON m.artgrinv = g.artgrinv
         GROUP BY g.nombre
         ORDER BY cantidad DESC
     """)
@@ -250,7 +251,7 @@ elif opcion == "Solicitudes":
                COUNT(*) as cantidad,
                SUM(solcan) as total_cantidad,
                AVG(solpre) as precio_promedio
-        FROM silver.solicitudes
+        FROM normalizado.fact_solicitudes
         WHERE solfec IS NOT NULL
         GROUP BY DATE_TRUNC('month', solfec)
         ORDER BY mes
@@ -272,11 +273,15 @@ elif opcion == "Solicitudes":
 
     # top articulos mas solicitados
     st.subheader("Articulos Mas Solicitados")
+    # los articulos que no estan en el catalogo (artcitem NULL) no cuentan
+    # para el ranking; si no, todos juntos quedarian primeros y seria raro.
     df_top = cargar_datos("""
-        SELECT artcitem, artdes, COUNT(*) as veces_solicitado,
-               SUM(solcan) as total_cantidad
-        FROM silver.solicitudes
-        GROUP BY artcitem, artdes
+        SELECT s.artcitem, m.artdes, COUNT(*) as veces_solicitado,
+               SUM(s.solcan) as total_cantidad
+        FROM normalizado.fact_solicitudes s
+        LEFT JOIN normalizado.maestro_articulos m ON s.artcitem = m.artcitem
+        WHERE s.artcitem IS NOT NULL
+        GROUP BY s.artcitem, m.artdes
         ORDER BY veces_solicitado DESC
         LIMIT 15
     """)
@@ -295,7 +300,7 @@ elif opcion == "Recepcion":
                COUNT(*) as recepciones,
                SUM(nrdcac) as total_recibido,
                AVG(solpre) as precio_promedio
-        FROM silver.recepcion
+        FROM normalizado.fact_recepcion
         WHERE nrcfec IS NOT NULL
         GROUP BY DATE_TRUNC('month', nrcfec)
         ORDER BY mes
@@ -308,11 +313,12 @@ elif opcion == "Recepcion":
     # proveedores principales
     st.subheader("Top Proveedores por Volumen")
     df_prov = cargar_datos("""
-        SELECT solpro as proveedor, COUNT(*) as recepciones,
-               SUM(solcan) as cantidad_total
-        FROM silver.recepcion
-        WHERE solpro IS NOT NULL
-        GROUP BY solpro
+        SELECT p.acreraso as proveedor, COUNT(*) as recepciones,
+               SUM(r.solcan) as cantidad_total
+        FROM normalizado.fact_recepcion r
+        JOIN normalizado.proveedores p ON r.solpro = p.acrecodi
+        WHERE r.solpro IS NOT NULL
+        GROUP BY p.acreraso
         ORDER BY cantidad_total DESC
         LIMIT 10
     """)
@@ -327,10 +333,11 @@ elif opcion == "Articulos":
     st.header("Analisis de Articulos")
 
     df_stock = cargar_datos("""
-        SELECT artcitem, artdes, ubialm, ubistock
-        FROM silver.articulos
-        WHERE ubistock IS NOT NULL
-        ORDER BY ubistock DESC
+        SELECT s.artcitem, m.artdes, s.ubialm, s.ubistock
+        FROM normalizado.fact_stock s
+        LEFT JOIN normalizado.maestro_articulos m ON s.artcitem = m.artcitem
+        WHERE s.ubistock IS NOT NULL
+        ORDER BY s.ubistock DESC
         LIMIT 20
     """)
 
@@ -343,7 +350,7 @@ elif opcion == "Articulos":
     st.subheader("Distribucion por Unidad de Medida")
     df_med = cargar_datos("""
         SELECT artmed, COUNT(*) as cantidad
-        FROM silver.maestro_articulos
+        FROM normalizado.maestro_articulos
         WHERE artmed IS NOT NULL
         GROUP BY artmed
         ORDER BY cantidad DESC
@@ -363,7 +370,7 @@ elif opcion == "Proyecciones":
         df_proy = cargar_datos("""
             SELECT DATE_TRUNC('month', solfec) as mes,
                    COUNT(*) as cantidad
-            FROM silver.solicitudes
+            FROM normalizado.fact_solicitudes
             WHERE solfec IS NOT NULL
             GROUP BY DATE_TRUNC('month', solfec)
             ORDER BY mes
@@ -405,7 +412,7 @@ elif opcion == "Proyecciones":
         from sklearn.ensemble import RandomForestRegressor
         df_precios = cargar_datos("""
             SELECT solfec, solpre, solcan
-            FROM silver.solicitudes
+            FROM normalizado.fact_solicitudes
             WHERE solfec IS NOT NULL AND solpre > 0
         """)
         modelo = RandomForestRegressor(n_estimators=100)

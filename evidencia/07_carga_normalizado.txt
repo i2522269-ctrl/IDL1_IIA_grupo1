@@ -1,0 +1,26 @@
+======================================================================
+  FASE 3: CARGA DEL ESQUEMA NORMALIZADO (3FN)
+  Fecha: 2026-08-13 21:44
+======================================================================
+
+[0] Ejecutando sql/normalizacion_3fn.sql ...
+  Script SQL ejecutado sin errores.
+
+----------------------------------------------------------------------
+  Conteos en normalizado
+----------------------------------------------------------------------
+  normalizado.grupos                 ->       32
+  normalizado.proveedores            ->      456
+  normalizado.maestro_articulos      ->   43,255
+  normalizado.fact_solicitudes       ->   41,971
+  normalizado.fact_recepcion         ->   43,109
+  normalizado.fact_stock             ->    4,130
+
+----------------------------------------------------------------------
+  Orfanos restantes tras la normalizacion (esperados: los ya vistos)
+----------------------------------------------------------------------
+  fact_solicitudes.artcitem NULL             ->    722
+  fact_solicitudes.solpro NULL               ->    179
+  fact_recepcion.solnum NULL                 ->    957
+  fact_recepcion.artcitem NULL               ->      1
+  maestro_articulos.artgrinv NULL            ->     19
