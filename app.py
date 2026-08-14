@@ -233,7 +233,7 @@ if opcion == "Resumen General":
         FROM normalizado.maestro_articulos m
         JOIN normalizado.grupos g ON m.artgrinv = g.artgrinv
         GROUP BY g.nombre
-        ORDER BY cantidad DESC
+        ORDER BY cantidad DESC, grupo
     """)
     fig = px.bar(df_grupos, x="grupo", y="cantidad", color="cantidad",
                  color_continuous_scale="Blues")
@@ -282,7 +282,7 @@ elif opcion == "Solicitudes":
         LEFT JOIN normalizado.maestro_articulos m ON s.artcitem = m.artcitem
         WHERE s.artcitem IS NOT NULL
         GROUP BY s.artcitem, m.artdes
-        ORDER BY veces_solicitado DESC
+        ORDER BY veces_solicitado DESC, s.artcitem
         LIMIT 15
     """)
     fig = px.bar(df_top, x="artcitem", y="veces_solicitado", color="total_cantidad",
@@ -319,7 +319,7 @@ elif opcion == "Recepcion":
         JOIN normalizado.proveedores p ON r.solpro = p.acrecodi
         WHERE r.solpro IS NOT NULL
         GROUP BY p.acreraso
-        ORDER BY cantidad_total DESC
+        ORDER BY cantidad_total DESC, proveedor
         LIMIT 10
     """)
     fig = px.pie(df_prov, values="cantidad_total", names="proveedor",
@@ -337,7 +337,7 @@ elif opcion == "Articulos":
         FROM normalizado.fact_stock s
         LEFT JOIN normalizado.maestro_articulos m ON s.artcitem = m.artcitem
         WHERE s.ubistock IS NOT NULL
-        ORDER BY s.ubistock DESC
+        ORDER BY s.ubistock DESC, s.artcitem
         LIMIT 20
     """)
 
@@ -353,7 +353,7 @@ elif opcion == "Articulos":
         FROM normalizado.maestro_articulos
         WHERE artmed IS NOT NULL
         GROUP BY artmed
-        ORDER BY cantidad DESC
+        ORDER BY cantidad DESC, artmed
     """)
     fig = px.pie(df_med, values="cantidad", names="artmed")
     st.plotly_chart(fig, use_container_width=True)
