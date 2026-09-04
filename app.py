@@ -453,20 +453,140 @@ elif opcion == "Proyecciones":
 
     # prediccion de precios futuros
     st.subheader("Prediccion de Precios Futuros")
-    try:
-        # esta seccion falla intencionalmente
+    st.caption("Modelo Random Forest por articulo (con tendencia temporal) y tendencia agregada sobre la capa gold.")
+
+    # Cargamos una sola vez el historial de precios por articulo: cantidad,
+    # mes y ano como caracteristicas. Nada de mezclar articulos incomparables
+    # en un solo modelo, eso fue lo que nos enredo la primera vez.
+    df_precios = cargar_datos("""
+        SELECT artcitem, solfec, solpre, solcan,
+               EXTRACT(YEAR FROM solfec)  AS ano,
+               EXTRACT(MONTH FROM solfec) AS mes
+        FROM normalizado.fact_solicitudes
+        WHERE solfec IS NOT NULL AND solpre > 0 AND solpre IS NOT NULL
+          AND solcan > 0 AND solcan IS NOT NULL
+    """)
+
+    if df_precios.empty:
+        st.warning("No hay datos de precios para entrenar el modelo.")
+    else:
+        # imports de sklearn una sola vez, que ya me canse de repetirlos en
+        # cada rama y encima se me escapo un duplicado la primera vez.
         from sklearn.ensemble import RandomForestRegressor
-        df_precios = cargar_datos("""
-            SELECT solfec, solpre, solcan
-            FROM normalizado.fact_solicitudes
-            WHERE solfec IS NOT NULL AND solpre > 0
-        """)
-        modelo = RandomForestRegressor(n_estimators=100)
-        modelo.fit(df_precios[["solcan"]], df_precios["solpre"])
-        prediccion = modelo.predict([[100]])
-        st.write(f"Precio estimado para 100 unidades: ${prediccion[0]:.2f}")
-    except Exception as e:
-        st.warning("Prediccion de precios no disponible - modelo en desarrollo")
+        from sklearn.model_selection import train_test_split
+        from sklearn.metrics import mean_absolute_error, r2_score
+
+        # ---- Opcion A: prediccion por articulo --------------------------
+        # Solo los articulos con suficiente historial merecen un modelo propio;
+        # con pocas filas el bosque se inventa resultados y eso no ayuda. Esta
+        # minima filtrada nos salvo de mostrar pronosticos tirados al aire.
+        conteo = df_precios.groupby("artcitem")["solpre"].count()
+        candidatos = conteo[conteo >= 20].sort_values(ascending=False).index.tolist()
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Opcion A: prediccion por articulo**")
+            if not candidatos:
+                st.info("Ningun articulo llega al minimo de 20 registros para entrenar un modelo propio.")
+            else:
+                art_sel = st.selectbox("Elige un articulo:", candidatos)
+                df_art = df_precios[df_precios["artcitem"] == art_sel].copy()
+                df_art = df_art.sort_values("solfec")
+
+                # caracteristicas: cantidad + ventana temporal (mes/ano). Con
+                # estas dos la tendencia de precio queda atrapada, simple pero
+                # efectivo para un primer corte.
+                X = df_art[["solcan", "mes", "ano"]].values
+                y = df_art["solpre"].values
+                X_tr, X_te, y_tr, y_te = train_test_split(
+                    X, y, test_size=0.25, random_state=42
+                )
+
+                modelo = RandomForestRegressor(
+                    n_estimators=100, max_depth=8, random_state=42
+                )
+                modelo.fit(X_tr, y_tr)
+                y_pred = modelo.predict(X_te)
+
+                r2 = r2_score(y_te, y_pred)
+                mae = mean_absolute_error(y_te, y_pred)
+
+                st.write(f"Registros del articulo: **{len(df_art)}**")
+                st.write(f"**R²**: {r2:.3f} | **MAE**: ${mae:,.2f}")
+                st.write(f"Precio medio historico: **${df_art['solpre'].mean():,.2f}**")
+
+                # pronosticamos el precio hacia el siguiente periodo asumiendo
+                # la ultima cantidad pedida y el proximo mes/ano
+                ult_can = float(df_art["solcan"].iloc[-1])
+                ult_mes = int(df_art["mes"].iloc[-1])
+                ult_ano = int(df_art["ano"].iloc[-1])
+                prox_mes = ult_mes + 1
+                prox_ano = ult_ano
+                if prox_mes > 12:
+                    prox_mes = 1
+                    prox_ano += 1
+                futuro_x = [[ult_can, prox_mes, prox_ano]]
+                precio_fut = modelo.predict(futuro_x)[0]
+                st.success(
+                    f"Precio estimado para ~{ult_can:,.0f} uds el {prox_ano}-{prox_mes:02d}: "
+                    f"**${precio_fut:,.2f}**"
+                )
+
+        with col_b:
+            # ---- Opcion B: tendencia agregada sobre capa gold ------------
+            # Usa las tablas gold ya armadas (demanda mensual por articulo).
+            # Ahi viven cantidad, frecuencia y stock, ideales para ver la
+            # tendencia de precio promedio a nivel de todo el catalogo.
+            st.markdown("**Opcion B: tendencia agregada (capa gold)**")
+            df_gold = cargar_datos("""
+                SELECT artcitem, periodo_mes,
+                       cantidad_total_despachada AS cantidad,
+                       frecuencia_pedidos         AS frecuencia,
+                       ultimo_stock_registrado    AS stock,
+                       precio_promedio_pactado    AS precio
+                FROM gold.prediccion_demanda_mensual
+                WHERE precio_promedio_pactado > 0
+                  AND cantidad_total_despachada IS NOT NULL
+            """)
+            if df_gold.empty:
+                st.info("No hay datos en la capa gold para la tendencia agregada.")
+            else:
+                df_gold["mes"] = df_gold["periodo_mes"].dt.month
+                df_gold["ano"] = df_gold["periodo_mes"].dt.year
+                Xg = df_gold[["cantidad", "frecuencia", "stock", "mes", "ano"]].values
+                yg = df_gold["precio"].values
+                Xg_tr, Xg_te, yg_tr, yg_te = train_test_split(
+                    Xg, yg, test_size=0.25, random_state=42
+                )
+
+                mg = RandomForestRegressor(
+                    n_estimators=150, max_depth=10, random_state=42
+                )
+                mg.fit(Xg_tr, yg_tr)
+                yg_pred = mg.predict(Xg_te)
+
+                r2g = r2_score(yg_te, yg_pred)
+                maeg = mean_absolute_error(yg_te, yg_pred)
+                st.write(f"Filas de la capa gold usadas: **{len(df_gold):,}**")
+                st.write(f"**R²**: {r2g:.3f} | **MAE**: ${maeg:,.2f}")
+
+                # tendencia del precio promedio global probable en el proximo mes
+                prox_g_mes = int(df_gold["mes"].max()) + 1
+                prox_g_ano = int(df_gold["ano"].max())
+                if prox_g_mes > 12:
+                    prox_g_mes = 1
+                    prox_g_ano += 1
+                prom_cant = float(df_gold["cantidad"].mean())
+                prom_frec = float(df_gold["frecuencia"].mean())
+                prom_stock = float(df_gold["stock"].mean())
+                precio_prox = mg.predict(
+                    [[prom_cant, prom_frec, prom_stock, prox_g_mes, prox_g_ano]]
+                )[0]
+                st.success(
+                    f"Precio promedio proyectado ({prox_g_ano}-{prox_g_mes:02d}): "
+                    f"**${precio_prox:,.2f}**"
+                )
+                st.caption("Vision macro; sirve como referencia de tendencia, no como precio de un articulo puntual.")
 
     # analisis de tendencias de stock
     st.subheader("Analisis de Tendencias de Stock")

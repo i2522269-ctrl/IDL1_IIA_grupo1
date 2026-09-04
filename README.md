@@ -6,6 +6,10 @@ Analisis predictivo de inventario y compras usando arquitectura medallion (bronz
 
 Este proyecto analiza datos de solicitudes, recepciones, articulos y proveedores para identificar patrones de compra y generar proyecciones de demanda futura.
 
+La app incluye prediccion de precios con Random Forest en dos niveles:
+- **Por articulo**: modelo por cada articulo con suficiente historial, usando cantidad y ventana temporal como caracteristicas, mostrando R2 y MAE.
+- **Tendencia agregada**: modelo sobre la capa gold (`prediccion_demanda_mensual`) para proyectar el precio promedio del catalogo.
+
 ## Estructura del proyecto
 
 ```

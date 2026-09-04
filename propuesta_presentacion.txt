@@ -1,0 +1,146 @@
+PROPUESTA DE PRESENTACION
+Proyecto Productivo IIA - Analisis predictivo de inventario y compras
+(guion basico de diapositivas para contar de que va el proyecto)
+
+----------------------------------------------------------------------
+Diapositiva 1 - PORTADA
+----------------------------------------------------------------------
+Titulo: Proyecto Productivo IIA
+Subtitulo: Analisis predictivo de inventario y compras
+Integrantes: [nombres del grupo]
+Fecha / Curso: Tercer Ciclo - Proyecto Productivo IIA
+
+----------------------------------------------------------------------
+Diapositiva 2 - QUE ES EL PROYECTO
+----------------------------------------------------------------------
+Idea central: un pipeline ETL + un dashboard interactivo que convierte
+datos crudos de compras en metricas y pronosticos de demanda.
+
+Puntos para decir:
+- Trabajamos con datos de solicitudes, recepciones, articulos y
+  proveedores de una empresa (anonimizados).
+- Objetivo: identificar patrones de compra y proyectar demanda futura
+  para apoyar la decision de inventario y compras.
+- Se sigue la arquitectura medallion: los datos se limpian, se normalizan
+  y se transforman en informacion lista para analizar.
+
+----------------------------------------------------------------------
+Diapositiva 3 - DATOS DE ORIGEN (bronze)
+----------------------------------------------------------------------
+Seis archivos CSV anonimizados:
+- Solicitudes_completo_ANONIMIZADO.csv
+- Recepcion_ANONIMIZADO.csv
+- Maestro_Articulos_ANONIMIZADO.csv
+- Articulos_ANONIMIZADO.csv (stock por ubicacion)
+- Proveedores_ANONIMIZADO.csv
+- grupos.csv
+
+Detalle:
+- ~42 mil solicitudes, ~43 mil recepciones, ~43 mil articulos en catalogo
+- 456 proveedores, 32 grupos
+- Llegan en formato texto, con duplicados, nulos e inconsistencias.
+
+----------------------------------------------------------------------
+Diapositiva 4 - ARQUITECTURA MEDALLION (el corazon del proyecto)
+----------------------------------------------------------------------
+Diagrama simple:
+bronze (crudo) -> silver (limpio y con tipos) -> normalizado (3FN)
+-> gold (metricas y demanda agregada)
+
+En pocas palabras:
+- bronze: datos como llegan.
+- silver: se corrigen tipos, nulos y duplicados.
+- normalizado: esquema en 3FN con dimensiones y tablas de hechos.
+- gold: tablas listas para el modelo predictivo.
+
+----------------------------------------------------------------------
+Diapositiva 5 - ETL: DE BRONZE A SILVER
+----------------------------------------------------------------------
+- Analisis de calidad de datos (nulos, tipos, rangos) y de duplicados.
+- Se definen funciones de parseo para fechas, numeros y enteros.
+- Se verifican los resultados con conteos y consultas de control.
+- Evidencias: 01_analisis_calidad_datos, 02_analisis_duplicados,
+  03_resultados_silver.
+
+----------------------------------------------------------------------
+Diapositiva 6 - ETL: DE SILVER A NORMALIZADO (3FN)
+----------------------------------------------------------------------
+- Se analiza redundancia e integridad referencial (evidencias 04 y 05).
+- Se divide en dimensiones y hechos con llaves foraneas:
+  * Dimensiones: grupos, proveedores, maestro_articulos.
+  * Hechos: fact_solicitudes, fact_recepcion, fact_stock.
+- Datos normalizados (conteos):
+  * solicitudes 41,971 | recepciones 43,109 | stock 4,130
+  * catalogo 43,255 | proveedores 456 | grupos 32
+- Se cargan en PostgreSQL (Supabase) y se valida (06 y 07).
+
+----------------------------------------------------------------------
+Diapositiva 7 - CAPA GOLD (novedad de la entrega)
+----------------------------------------------------------------------
+Dos tablas listas para el modelo:
+- gold.metricas_prediccion_proveedor: 383 filas con atenciones, lead
+  time y volumen por proveedor.
+- gold.prediccion_demanda_mensual: 33,010 filas con demanda mensual por
+  articulo (cantidad, frecuencia, precio y stock).
+
+Detalle para mencionar (si preguntan):
+- La demanda se construye desde silver.recepcion y no desde normalizado
+  para no perder recepciones huerfanas (957 sin pedido y 1 articulo fuera
+  de catalogo) que rompen el conteo de frecuencia de pedidos.
+- Se valido que ambas tablas reproducen exacto lo existente: 0 diferencias
+  (evidencias 08 y 09).
+
+----------------------------------------------------------------------
+Diapositiva 8 - LA APP: DASHBOARD STREAMLIT
+----------------------------------------------------------------------
+Vistas principales:
+- Resumen General: KPIs (solicitudes, recepciones, articulos del
+  catalogo, proveedores) y articulos por grupo.
+- Solicitudes: evolucion mensual y top de articulos mas solicitados.
+- Recepciones: recepciones por mes y por proveedor.
+- Stock: top 20 articulos con mayor stock por ubicacion.
+- Proyecciones: pronostico de solicitudes a 6 meses.
+
+Link de la app en Streamlit Cloud:
+https://idl1iiagrupo1-xujkvhuzbdgf2fz2p7qqvh.streamlit.app/
+
+----------------------------------------------------------------------
+Diapositiva 9 - DIAGNOSTICOS Y MODELOS PREDICTIVOS
+----------------------------------------------------------------------
+- Prophet: pronostico de stock a 6 meses con banda de incertidumbre.
+- Red neuronal Keras: modelo con ventana deslizante de 12 meses.
+- Red neuronal PyTorch: misma logica, framework alternativo.
+- Regresion lineal (Numpy): pronostico simple con banda de error.
+- Detalle: los modelos usan semilla fija para que los resultados sean
+  reproducibles y manejan series cortas o constantes sin romperse.
+
+----------------------------------------------------------------------
+Diapositiva 10 - SEGURIDAD Y REPRODUCIBILIDAD
+----------------------------------------------------------------------
+- Credenciales de la base fuera del codigo: viven en .env (local) o en
+  secrets de Streamlit Cloud.
+- ETL con conteos de control en cada etapa; todas las evidencias quedan
+  en la carpeta evidencia/ (del 01 al 09).
+- Scripts SQL documentados en la carpeta sql/.
+
+----------------------------------------------------------------------
+Diapositiva 11 - TECNOLOGIAS
+----------------------------------------------------------------------
+- Python 3.11+
+- PostgreSQL (Supabase) para las 4 capas.
+- Streamlit + Plotly para el dashboard.
+- Pandas / NumPy / Scikit-learn para el procesamiento.
+- Prophet, TensorFlow (Keras) y PyTorch para los modelos.
+
+----------------------------------------------------------------------
+Diapositiva 12 - CIERRE / ENTREGABLES
+----------------------------------------------------------------------
+Resumen de lo entregado:
+- Pipeline ETL completo y verificado (bronze -> silver -> normalizado
+  -> gold) con evidencias 01-09.
+- Esquemas documentados (sql/) y scripts reproducibles (evidencia/).
+- Aplicacion Streamlit funcional con dashboards y pronosticos.
+
+Para ejecutar en local:
+  pip install -r requirements.txt
+  streamlit run app.py
