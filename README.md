@@ -131,3 +131,25 @@ que ambas tablas reproducen exacto (0 diferencias). El ETL completo esta en
 
 ## STREAMLIT
 https://idl1iiagrupo1-xujkvhuzbdgf2fz2p7qqvh.streamlit.app/
+
+## Estado e incidencia: Supabase
+
+Durante la entrega, la base de datos del proyecto en Supabase sufrio una caida
+parcial del servicio (incidencia activa de "Project Lifecycle Actions" que
+bloquea restaurar o crear proyectos). Esto impidio restablecer la conexion de la
+app con la BD en el momento de la presentacion.
+
+No hay que re-hacer nada del codigo: queda un backup completo del cluster en
+`db_cluster-23-08-2026@15-44-39.backup.gz` que respalda las cuatro capas
+(bronze, silver, normalizado y gold) con sus datos.
+
+Para volver a dejar la app en linea, cuando Supabase restablezca el servicio:
+
+1. Restaurar el backup `db_cluster-23-08-2026@15-44-39.backup.gz` en un
+   proyecto Supabase (si el ref del proyecto cambio, actualizar `DB_HOST`,
+   `DB_USER` y `DB_PASSWORD` en `.env` local y en los secrets de Streamlit
+   Cloud).
+2. Verificar la conexion con un script o con la propia app.
+
+El ETL y los modelos quedan intactos y reproducibles, asi que solo falta que la
+infraestructura vuelva.
