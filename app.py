@@ -90,6 +90,10 @@ def tabla_productos_por_fecha(pronostico, fechas_futuro, participacion):
         df_mes["mes"] = mes
         filas.append(df_mes)
     tabla = pd.concat(filas, ignore_index=True)
+    # enteros para que el export no luzca como salida de calculadora
+    # y orden cronologico que cualquier humano entiende a la primera
+    tabla["cantidad_estimada"] = tabla["cantidad_estimada"].round(0).astype(int)
+    tabla = tabla.sort_values(["mes", "cantidad_estimada"], ascending=[True, False])
     return tabla[["artcitem", "artdes", "grupo", "mes", "cantidad_estimada"]]
 
 # Modelo de stock con Prophet. Lo dejamos cacheado en memoria para que
