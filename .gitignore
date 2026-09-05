@@ -8,6 +8,11 @@
 # Instrucciones locales de la IA (nunca subir a GitHub)
 AGENTS.md
 
+# Documentos locales privados (no subir a GitHub)
+Informe_Proyecto_Productivo_IIA.docx
+propuesta_presentacion.txt
+HANDOFF_GOLD.md
+
 # Caché y archivos temporales
 __pycache__/
 *.pyc
