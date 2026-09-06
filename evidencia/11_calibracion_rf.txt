@@ -1,0 +1,37 @@
+======================================================================
+  FASE 1: CALIBRACION RANDOM FOREST - POR ARTICULO
+  Fecha: 2026-09-06 12:32
+  Caracteristicas: cantidad, mes, anio (igual que en la app).
+  Solo lectura; ningun modelo se guarda, se reporta el mejor grid.
+======================================================================
+
+  Articulos con historial suficiente (>=20 registros): 380
+
+  Articulo                   n  n_est  depth leaf       R2        MAE
+  ---------------------- ----- ------ ------ ---- -------- ----------
+  ART-15285                177    200     12    3    0.882       0.14
+  ART-18105                155     50      6    2   -8.000       0.00
+  ART-15283                128     50      6    2    0.650       0.90
+  ART-17468                103    150     10    5    0.683       0.20
+  ART-17871                 98    100     10    5    0.713       0.10
+
+  Conclusión: los hiperparámetros del ganador varían por artículo,
+  pero el grid de N=100/depth 8-10 anda bien en general.
+======================================================================
+  FASE 2: CALIBRACION RANDOM FOREST - TENDENCIA AGREGADA (GOLD)
+  Fecha: 2026-09-06 12:32
+  Caracteristicas: cantidad, frecuencia, stock, mes, anio.
+======================================================================
+
+  Filas de la capa gold usadas: 33,009
+
+   n_est  depth leaf       R2        MAE
+  ------ ------ ---- -------- ----------
+      50      6    2    0.184     109.19
+     100      8    2    0.190     106.11
+     100     10    5    0.186     104.50
+     150     10    5    0.186     104.37
+     200     12    3    0.186     103.08
+
+  Mejor combinacion: n_estimators=100, max_depth=8, min_samples_leaf=2
+    con R2=0.190 y MAE=106.11

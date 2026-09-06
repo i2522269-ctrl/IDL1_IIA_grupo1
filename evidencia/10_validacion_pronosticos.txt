@@ -1,0 +1,34 @@
+======================================================================
+  FASE 1: BACKTEST A HORIZONTE FIJO (6 MESES)
+  Fecha: 2026-09-06 12:26
+  Split cronologico: los ultimos 6 meses quedan fuera y se predicen.
+======================================================================
+
+  Serie mensual: 42 meses, de 2023-01 a 2026-06
+
+  Modelo                                MAE         RMSE   MAPE(%)
+  ---------------------------- ------------ ------------ ---------
+  Naive (ultimo valor)            1,142,799    1,413,191     63.7%
+  Regresion lineal (numpy)          964,936    1,140,947    152.3%
+  Prophet                         1,033,894    1,405,889    175.5%
+  Keras (MLP)                     1,133,589    1,418,500    183.4%
+  PyTorch (MLP)                   1,443,173    1,590,593    212.4%
+
+  Nota: el MAPE se puede ir de madre si hay meses con stock 0;
+  se deja igual para que quede claro quien le gana al naive.
+======================================================================
+  FASE 2: WALK-FORWARD DE 1 PASO (ULTIMOS MESES)
+  Cada mes se predice con solo la historia previa, 1 paso adelante.
+  Asi se simula el uso real: el modelo no vio el dato al predecirlo.
+======================================================================
+
+  Modelo                          MAE         RMSE     n
+  ---------------------- ------------ ------------ -----
+  Naive                     1,115,021    1,440,121    28
+  Regresion lineal          1,104,618    1,333,136    28
+  Prophet                   1,288,772    1,742,060    28
+  Keras                     1,343,553    1,734,021    28
+  PyTorch                   1,419,231    1,759,712    28
+
+  Cuantos menos MAE/RMSE en el horizonte de 1 mes, mejor. Y si el
+  Naive gana, es la senal de que la serie no tiene patron que explotar.

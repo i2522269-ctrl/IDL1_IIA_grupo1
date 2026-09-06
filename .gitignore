@@ -9,9 +9,12 @@
 AGENTS.md
 
 # Documentos locales privados (no subir a GitHub)
-Informe_Proyecto_Productivo_IIA.docx
+# los informes quedan fuera del repo en cualquier version: v1, v2, v3 y las que vengan.
+Informe_Proyecto_Productivo_IIA*.docx
+informe_imagenes/
 propuesta_presentacion.txt
 HANDOFF_GOLD.md
+HANDOFF_ESTADO.md
 
 # Caché y archivos temporales
 __pycache__/
