@@ -5,6 +5,7 @@ psycopg2-binary
 numpy
 scikit-learn
 python-dotenv
+python-docx
 prophet
 # En la nube no hay GPU, asi que mejor la version CPU que pesa menos.
 # Fijadas igual que las locales para que pip no se vaya de mambo.

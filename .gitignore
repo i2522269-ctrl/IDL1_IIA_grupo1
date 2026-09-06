@@ -16,6 +16,9 @@ propuesta_presentacion.txt
 HANDOFF_GOLD.md
 HANDOFF_ESTADO.md
 
+# Archivos temporales de bloqueo de Word (los ~$ que aparecen al abrir un docx)
+~$*.docx
+
 # Caché y archivos temporales
 __pycache__/
 *.pyc

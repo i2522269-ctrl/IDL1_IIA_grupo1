@@ -71,6 +71,9 @@ pip install -r requirements.txt
 
 # Ejecutar la app
 streamlit run app.py
+
+# Ejecutar el informe navegable (version 4, lee el docx)
+streamlit run app_informe.py
 ```
 
 ## Tablas en Supabase
