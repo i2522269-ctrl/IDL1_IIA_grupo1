@@ -11,8 +11,7 @@ from datetime import datetime
 # Las credenciales viven en .streamlit/secrets.toml (nube) o en .env
 # (local). Nada de passwords en el codigo: la unica vez que dejamos una
 # hardcodeada quedo un susto en el historial de git.
-@st.cache_resource
-def conectar():
+def _config_db():
     import os
     from dotenv import load_dotenv
 
@@ -42,11 +41,41 @@ def conectar():
             "(local) o Settings > Secrets (Streamlit Cloud)."
         )
 
-    return psycopg2.connect(**cfg)
+    # Supabase exige SSL; sin esto la nube se pone exquisita y no conecta.
+    # El timeout evita que la app se quede colgada cuando el pooler no responde.
+    cfg["sslmode"] = "require"
+    cfg["connect_timeout"] = 10
+    return cfg
+
+
+@st.cache_resource
+def conectar():
+    return psycopg2.connect(**_config_db())
 
 def cargar_datos(consulta):
-    conn = conectar()
-    return pd.read_sql(consulta, conn)
+    try:
+        return pd.read_sql(consulta, conectar())
+    except psycopg2.OperationalError:
+        # La conexion cacheada pudo morir de aburrimiento; la tiro y reintento una vez.
+        conectar.clear()
+        try:
+            return pd.read_sql(consulta, conectar())
+        except psycopg2.OperationalError as e:
+            # Antes esto escupia el traceback redactado y quedabamos ciegos en la nube.
+            # Ahora decimos host y usuario (nunca la clave) para cazar el desfase.
+            try:
+                cfg = _config_db()
+                destino = f"{cfg['user']}@{cfg['host']}:{cfg['port']}/{cfg['dbname']}"
+            except Exception:
+                destino = "(no pude leer la configuracion)"
+            st.error("No se pudo conectar a la base de datos (Supabase).")
+            st.caption(f"Intente con: {destino}")
+            st.caption(f"Detalle: {e}")
+            st.caption(
+                "Si ese host/usuario no coincide con el .env local, actualiza los secrets "
+                "en Streamlit Cloud (Settings > Secrets) y haz Reboot de la app."
+            )
+            st.stop()
 
 # Stock recibido por mes. Como lo usamos en tres lados, una sola funcion y listo.
 def cargar_stock_mensual():
