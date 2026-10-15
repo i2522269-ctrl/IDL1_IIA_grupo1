@@ -94,3 +94,19 @@ Opciones para acoplar una API de verdad mas adelante:
 
 Si algo de esto falla, revisa primero la data; el codigo ya soporto verme
 sufrir una vez y no tiene ganas de repetir la experiencia.
+
+## Ejecución automatizada (orquestación)
+
+Para ejecutar el pipeline completo en orden y de forma repetible (Windows/PowerShell):
+
+```powershell
+# Solo lectura/checkpoint (recomendado para validar)
+.\run_etl_completo.ps1
+
+# Aplicando ingesta incremental en bronze
+.\run_etl_completo.ps1 -ApplyIncremental
+```
+
+El script ejecuta en orden: `etl_incremental.py` → `etl_silver.py` → `etl_normalizado.py` → `etl_gold.py` y valida códigos de salida por fase. Esto no modifica la lógica de los ETL, solo asegura el orden correcto para escalar la operación.
+
+Para ejecución programada (diaria/semanal), usar **Task Scheduler** (Windows) o **cron** (Linux). El punto de entrada incremental (`etl_incremental.py --apply`) evita recargar todo cuando crece el volumen.

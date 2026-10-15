@@ -33,6 +33,9 @@ La app incluye prediccion de precios con Random Forest en dos niveles:
 ├── .streamlit/secrets.toml       # Credenciales locales (NO se sube a git)
 ├── .env                          # Credenciales locales para scripts ETL (NO se sube a git)
 ├── app.py                        # Aplicacion Streamlit
+├── app_informe.py                # Informe navegable (lee el docx v7)
+├── app_escalabilidad.py          # Presentacion de escalabilidad (no usa BD)
+├── run_etl_completo.ps1          # Orquestador del ETL por fases
 └── requirements.txt              # Dependencias de Python
 ```
 
@@ -72,8 +75,11 @@ pip install -r requirements.txt
 # Ejecutar la app
 streamlit run app.py
 
-# Ejecutar el informe navegable (version 4, lee el docx)
+# Ejecutar el informe navegable (version 7, lee el docx)
 streamlit run app_informe.py
+
+# Ejecutar la presentacion de escalabilidad (no consulta la BD)
+streamlit run app_escalabilidad.py
 ```
 
 ## Tablas en Supabase

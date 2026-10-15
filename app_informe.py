@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# App del informe: convierte el docx v4 en una pagina navegable.
+# App del informe: convierte el docx v7 en una pagina navegable.
 # Si cambia el Word, cambia la app; aqui no duplicamos contenido a mano,
 # porque la ultima vez que se edito el texto en dos lados quedo un desfase
 # que solo se noto en la defensa. Ironias de la vida.
@@ -8,7 +8,7 @@ import pandas as pd
 from docx import Document
 from docx.oxml.ns import qn
 
-RUTA_INFORME = "Informe_Proyecto_Productivo_IIA_v4.docx"
+RUTA_INFORME = "Informe_Proyecto_Productivo_IIA_v7.docx"
 
 # El docx nacio en espanol (Word en espanol, obvio), asi que los styleId
 # vienen como 'Ttulo1' y 'Listaconvietas'. Con este mapa no dependemos de
@@ -151,14 +151,14 @@ def main():
 
     # cabecera fija arriba, con la misma onda que el dashboard hermano
     st.title("Informe del Proyecto Productivo IIA")
-    st.caption("Version 4 - el informe completo con el tono humano que le faltaba al Word original")
+    st.caption("Version 7 - el informe completo con las secciones 13 a 16 desarrolladas a fondo")
 
     for s in secciones:
         if s["titulo"] == eleccion:
             render_seccion(s)
 
     st.markdown("---")
-    st.caption("Proyecto Productivo IIA - informe navegable generado desde el docx v4")
+    st.caption("Proyecto Productivo IIA - informe navegable generado desde el docx v7")
     st.caption("Repositorio: https://github.com/i2522269-ctrl/IDL1_IIA_grupo1")
 
 
